@@ -9,10 +9,10 @@ frames:  # which frames
   # - 1   # index jump
 view_image: # Settings for image viewer
   active: true
-  cam: '02'
+  cam: 'cam2'
   pointcloud: # project point cloud
     active: true
-    color: "intensity" # intensity, height, depth
+    color: "distance" # intensity, height, depth
   polygons:
     active: true
 view_3D: # Settings for 3D point cloud viewer
