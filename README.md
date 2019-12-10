@@ -28,4 +28,30 @@ Please see disclaimers below before using Polylidar with an Intel RealSense came
 
 ## Disclaimers
 
+## Notes
+
+Copy this to your clipboard.  Paste (Ctrl-V) into Open3D to get the correct view
+
+```
+{
+	"class_name" : "ViewTrajectory",
+	"interval" : 29,
+	"is_loop" : false,
+	"trajectory" : 
+	[
+		{
+			"boundingbox_max" : [ 10.0, 20.0, 1.0 ],
+			"boundingbox_min" : [ -10.0, -0.059999999999999998, -1.6299999999999999 ],
+			"field_of_view" : 60.0,
+			"front" : [ -0.002797466300819589, -0.93017941771777879, 0.36709457233322029 ],
+			"lookat" : [ 0.0, 9.9700000000000006, -0.31499999999999995 ],
+			"up" : [ 0.015936993373838547, 0.36700791577643127, 0.93008128784512278 ],
+			"zoom" : 0.45999999999999974
+		}
+	],
+	"version_major" : 1,
+	"version_minor" : 0
+}
+```
+
 

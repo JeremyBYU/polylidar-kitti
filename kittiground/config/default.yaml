@@ -21,8 +21,8 @@ polygon: # Settings for polygons extraction
   pointcloud: # Settings for point cloud generation from depth map image
     filter: true
   polylidar: # Parameters we send to polylidar. Determine plane and polygon extracton from point clouds.
-    lmax: 0.05 # maximum distance between points in plane for spatial connection
-    zThresh: 0.004 # triangles with z-height less than this have normal filtering skipped. For sensor noise.
+    lmax: 0.50 # maximum distance between points in plane for spatial connection
+    zThresh: 0.06 # triangles with z-height less than this have normal filtering skipped. For sensor noise.
     normThresh: 0.98 # triangles whose normal is greater than X degrees are filtered acos(tri_norm * [0,0,1])
     alpha: 0.0 # must be set to 0.0 if using lmax
   # ground_normal: # Settings used to estimate normal of ground plane in point cloud.
@@ -31,11 +31,11 @@ polygon: # Settings for polygons extraction
   postprocess: # post processing of polygons returned from polylidar for ground/obstacle identification
     filter: # obstacles must have these characteristics
       hole_area:
-        min: 75   # cm^2
-        max: 7850 # cm^2
+        min: 1   # m^2
+        max: 10 # m^2
       hole_vertices:
         min: 10
       plane_area:
-        min: 5000 # cm^2
-    buffer: 0.1 # cm, rounded edge buffer
-    simplify: 0.5  # cm, simplify edges 
+        min: 25 # m^2
+    buffer: 0.1 # m, rounded edge buffer
+    simplify: 0.1  # m, simplify edges 
