@@ -9,7 +9,7 @@ import open3d as o3d
 
 from polylidar import extractPolygons
 from kittiground.kittiground.open3d_util import init_vis, handle_shapes
-from kittiground.grounddetector import align_vector_to_zaxis, filter_planes_and_holes, plot_planes_and_obstacles, project_points
+from kittiground.grounddetector import align_vector_to_zaxis, filter_planes_and_holes2, plot_planes_and_obstacles, project_points
 
 np.set_printoptions(suppress=True,
                     formatter={'float_kind': '{:.8f}'.format})
@@ -118,7 +118,7 @@ class KittiGround(object):
         t1 = time.time()
         polygons = extractPolygons(points3D_rot_, **self.polylidar_kwargs)
         t2 = time.time()
-        planes, obstacles = filter_planes_and_holes(
+        planes, obstacles = filter_planes_and_holes2(
             polygons, points3D_rot_, self.postprocess)
         logging.debug("Number of Planes: %d; Number of obstacles: %d",
                      len(planes), len(obstacles))

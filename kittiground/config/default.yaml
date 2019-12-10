@@ -20,9 +20,9 @@ view_3D: # Settings for 3D point cloud viewer
 polygon: # Settings for polygons extraction
   polylidar: # Parameters we send to polylidar. Determine plane and polygon extracton from point clouds.
     lmax: 1.50 # maximum distance between points in plane for spatial connection
-    zThresh: 0.05 # triangles with z-height less than this have normal filtering skipped. For sensor noise.
+    zThresh: 0.06 # triangles with z-height less than this have normal filtering skipped. For sensor noise.
     normThresh: 0.95 # triangles whose normal is greater than X degrees are filtered acos(tri_norm * [0,0,1])
-    normThreshMin: 0.5 # mininum level of planarity needed
+    normThreshMin: 0.7 # mininum level of planarity needed
     alpha: 0.0 # must be set to 0.0 if using lmax
   # ground_normal: # Settings used to estimate normal of ground plane in point cloud.
   #                # This is used to rotate the point cloud such that ground normal aligns with the z-axis
@@ -30,11 +30,12 @@ polygon: # Settings for polygons extraction
   postprocess: # post processing of polygons returned from polylidar for ground/obstacle identification
     filter: # obstacles must have these characteristics
       hole_area:
-        min: 0.1   # m^2
+        min: 0.5   # m^2
         max: 10 # m^2
       hole_vertices:
-        min: 10
+        min: 3
       plane_area:
-        min: 25 # m^2
-    buffer: 0 # m, rounded edge buffer
-    simplify: 0  # m, simplify edges 
+        min: 49 # m^2
+    positive_buffer: 0.05
+    buffer: 0.4 # m, rounded edge buffer
+    simplify: 0.3  # m, simplify edges 
