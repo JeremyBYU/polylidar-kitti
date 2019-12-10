@@ -14,11 +14,27 @@ CMTOM = 0.01
 ORANGE = [249, 115, 6]
 
 
+def create_3D_coords(poly, height=0):
+    pts = np.array(poly.exterior.coords)  # NX2
+    if pts.shape[1] > 2:
+        return poly
+    pts = np.column_stack((pts, np.ones((pts.shape[0])) * height))  # NX3
+    shell = pts.tolist()
+    holes = []
+    for hole in poly.interiors:
+        pts = np.array(hole.coords)
+        pts = np.column_stack((pts, np.ones((pts.shape[0])) * height))  # NX3
+        holes.append(pts.tolist())
+    # print(shell, holes)
+    return Polygon(shell=shell, holes=holes)
+
+
 def rotation_matrix(x_theta=90):
     theta_rad = math.radians(x_theta)
     rotation_matrix = np.array([[1, 0, 0], [0, math.cos(theta_rad), -math.sin(theta_rad)],
                                 [0, math.sin(theta_rad), math.cos(theta_rad)]])
     return rotation_matrix
+
 
 def axis_angle_rm(axis=np.array([1, 0, 0]), angle=-1.57):
     """
@@ -54,11 +70,11 @@ def filter_zero(points_np):
     # print(f"Filtering Took {(time.time() - t0) * 1000:.1f} ms")
     return points_np
 
+
 def rotate_points(points, rot):
     """
     Rotate 3D points given a provided rotation matrix
     """
-    t0 = time.time()
     points_rot = points.transpose()
     points_rot = rot @ points_rot
     points_rot = points_rot.transpose()
@@ -128,25 +144,45 @@ def filter_planes_and_holes(polygons, points, config_pp):
         shell_coords = [get_point(pi, points) for pi in poly.shell]
         outline = Polygon(shell=shell_coords)
 
-        outline = outline.buffer(distance=CMTOM*config_pp['buffer'])
-        outline = outline.simplify(tolerance=CMTOM*config_pp['simplify'])
-        area = outline.area * M2TOCM2
+        outline = outline.buffer(distance=config_pp['buffer'])
+        outline = outline.simplify(tolerance=config_pp['simplify'])
+        area = outline.area
         if area >= post_filter['plane_area']['min']:
             # Capture the polygon as well as its z height
-            planes.append((outline, shell_coords[0][2]))
+            z_value = shell_coords[0][2]
+            planes.append((create_3D_coords(outline, z_value), z_value))
 
             for hole_poly in poly.holes:
                 # Filter by number of obstacle vertices, removes noisy holes
                 if len(hole_poly) > post_filter['hole_vertices']['min']:
                     shell_coords = [get_point(pi, points) for pi in hole_poly]
                     outline = Polygon(shell=shell_coords)
-                    area = outline.area * M2TOCM2
+                    area = outline.area
                     # filter by area
                     if area >= post_filter['hole_area']['min'] and area < post_filter['hole_area']['max']:
-                        outline = outline.buffer(distance=CMTOM*config_pp['buffer'])
-                        outline = outline.simplify(tolerance=CMTOM*config_pp['simplify'])
-                        obstacles.append((outline, shell_coords[0][2]))
+                        outline = outline.buffer(distance=config_pp['buffer'])
+                        outline = outline.simplify(
+                            tolerance=config_pp['simplify'])
+                        z_value = shell_coords[0][2]
+                        obstacles.append(
+                            (create_3D_coords(outline, z_value), z_value))
     return planes, obstacles
+
+
+def project_points(pts3D_cam_rect, proj_matrix, img_m, img_n):
+    pts2D_cam_rect = proj_matrix @ pts3D_cam_rect
+
+    # Remove pixels that are outside the image
+    pts2D_cam_rect[0, :] = pts2D_cam_rect[0, :] / pts2D_cam_rect[2, :]
+    pts2D_cam_rect[1, :] = pts2D_cam_rect[1, :] / pts2D_cam_rect[2, :]
+
+    idx = (pts2D_cam_rect[0, :] >= 0) & (pts2D_cam_rect[0, :] < img_n) & \
+        (pts2D_cam_rect[1, :] >= 0) & (pts2D_cam_rect[1, :] < img_m)
+
+    pts2D_cam_rect_filt = np.ascontiguousarray(
+        pts2D_cam_rect[:, idx].astype(np.int))
+
+    return pts2D_cam_rect_filt, idx
 
 
 def get_pix_coordinates(pts, proj_mat, w, h):
@@ -163,7 +199,9 @@ def get_pix_coordinates(pts, proj_mat, w, h):
     """
     points_t = np.ones(shape=(4, pts.shape[1]))
     points_t[:3, :] = pts
-    pixels = project_points_img(points_t, proj_mat, w, h)
+    pixels, idx = project_points(points_t, proj_mat, h, w)
+    pixels = np.ascontiguousarray(pixels[:2, :])
+    logging.debug("Pixels Shape %r", pixels.shape)
     return pixels
 
 
@@ -171,19 +209,20 @@ def plot_opencv_polys(polygons, color_image, proj_mat, rot_mat, w, h, color=(0, 
     for i, (poly, height) in enumerate(polygons):
         # Get 2D polygons and assign z component the height value of extracted plane
         pts = np.array(poly.exterior.coords)  # NX2
-        pts = np.column_stack((pts, np.ones((pts.shape[0])) * height))  # NX3
-        # Transform flat plane coordinate system to original cordinate system of depth frame
+        # pts = np.column_stack((pts, np.ones((pts.shape[0])) * height))  # NX3
+        # Transform polylidar plane coordinate system (z-up) to original cordinate system of camera frame
         pts = pts.transpose()  # 3XN
         pts = np.linalg.inv(rot_mat) @ pts
 
-        # np.savetxt(f"polygon_{i}_cameraframe.txt", pts.transpose())
         # Project coordinates to image space
-        pix_coords = get_pix_coordinates(pts, proj_mat, w, h)
+        pix_coords = get_pix_coordinates(pts, proj_mat, w, h).T
         pix_coords = pix_coords.reshape((-1, 1, 2))
-        cv2.polylines(color_image, [pix_coords], True, color, thickness=thickness)
+        cv2.polylines(color_image, [pix_coords],
+                      True, color, thickness=thickness)
+    return color_image
 
 
-def plot_planes_and_obstacles(planes, obstacles, proj_mat, rot_mat, color_image, config, thickness=2):
+def plot_planes_and_obstacles(planes, obstacles, proj_mat, rot_mat, color_image, width, height, thickness=2):
     """Plots the planes and obstacles (3D polygons) into the color image
 
     Arguments:
@@ -192,13 +231,14 @@ def plot_planes_and_obstacles(planes, obstacles, proj_mat, rot_mat, color_image,
         proj_mat {ndarray} -- Projection Matrix
         rot_mat {ndarray} -- Rotation Matrix
         color_image {ndarray} -- Color Image
-        config {dict} -- Configuration
+        width {int} -- width of image
+        height {int} -- height of image
     """
-    plot_opencv_polys(
-        planes, color_image, proj_mat, rot_mat, config['color']['width'],
-        config['color']['height'], color=(0, 255, 0), thickness=thickness)
+    color_image = plot_opencv_polys(
+        planes, color_image, proj_mat, rot_mat, width,
+        height, color=(0, 255, 0), thickness=thickness)
 
-    plot_opencv_polys(
-        obstacles, color_image, proj_mat, rot_mat, config['color']['width'],
-        config['color']['height'], color=ORANGE,  thickness=thickness)
-
+    color_image = plot_opencv_polys(
+        obstacles, color_image, proj_mat, rot_mat, width,
+        height, color=ORANGE,  thickness=thickness)
+    return color_image

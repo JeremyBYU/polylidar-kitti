@@ -11,17 +11,15 @@ view_image: # Settings for image viewer
   active: true
   cam: 'cam2'
   pointcloud: # project point cloud
-    active: true
+    active: false
     color: "distance" # intensity, height, depth
   polygons:
     active: true
 view_3D: # Settings for 3D point cloud viewer
   active: false
 polygon: # Settings for polygons extraction
-  pointcloud: # Settings for point cloud generation from depth map image
-    filter: true
   polylidar: # Parameters we send to polylidar. Determine plane and polygon extracton from point clouds.
-    lmax: 0.50 # maximum distance between points in plane for spatial connection
+    lmax: 1.50 # maximum distance between points in plane for spatial connection
     zThresh: 0.06 # triangles with z-height less than this have normal filtering skipped. For sensor noise.
     normThresh: 0.98 # triangles whose normal is greater than X degrees are filtered acos(tri_norm * [0,0,1])
     alpha: 0.0 # must be set to 0.0 if using lmax

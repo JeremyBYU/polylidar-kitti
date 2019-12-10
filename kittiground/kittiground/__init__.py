@@ -8,11 +8,12 @@ import numpy as np
 import open3d as o3d
 
 from polylidar import extractPolygons
-from kittiground.kittiground.open3d_util import init_vis
-from kittiground.grounddetector import align_vector_to_zaxis, filter_planes_and_holes
+from kittiground.kittiground.open3d_util import init_vis, handle_shapes
+from kittiground.grounddetector import align_vector_to_zaxis, filter_planes_and_holes, plot_planes_and_obstacles, project_points
 
 np.set_printoptions(suppress=True,
-   formatter={'float_kind':'{:.8f}'.format})
+                    formatter={'float_kind': '{:.8f}'.format})
+
 
 class KittiGround(object):
     def __init__(self, config):
@@ -73,8 +74,9 @@ class KittiGround(object):
         new_oxts = []
         for oxts in self.data_kitti.oxts:
             T = oxts.T_w_imu
-            reverse_yaw  = rotz(oxts.packet.yaw).T
-            reverse_yaw = transform_from_rot_trans(reverse_yaw, np.array([0, 0, 0]))
+            reverse_yaw = rotz(oxts.packet.yaw).T
+            reverse_yaw = transform_from_rot_trans(
+                reverse_yaw, np.array([0, 0, 0]))
             T = reverse_yaw @ T
             new_oxts.append(OxtsData(oxts.packet, T))
         self.data_kitti.oxts = new_oxts
@@ -93,21 +95,6 @@ class KittiGround(object):
         intensity_filt = np.ascontiguousarray(intensity[idx])
         return pts3D_cam_rect_filt, intensity_filt
 
-    def project_points(self, pts3D_cam_rect):
-        pts2D_cam_rect = self.P_rect @ pts3D_cam_rect
-        pts2D_cam_rect[0, :] = pts2D_cam_rect[0, :] / pts2D_cam_rect[2, :]
-        pts2D_cam_rect[1, :] = pts2D_cam_rect[1, :] / pts2D_cam_rect[2, :]
-
-        idx = (pts2D_cam_rect[0, :] >= 0) & (pts2D_cam_rect[0, :] < self.img_n) & \
-            (pts2D_cam_rect[1, :] >= 0) & (pts2D_cam_rect[1, :] < self.img_m)
-
-        pts2D_cam_rect_filt = np.ascontiguousarray(
-            pts2D_cam_rect[:, idx].astype(np.int))
-
-        return pts2D_cam_rect_filt, idx
-        # intensity_filt = intensity[idx]
-        #  = pts3D_velo_unrectified[]
-
     @staticmethod
     def plot_points(image, points, color):
         """ plot project velodyne points into camera image """
@@ -121,16 +108,22 @@ class KittiGround(object):
         return cv2.cvtColor(hsv_image, cv2.COLOR_HSV2RGB)
 
     def get_polygon(self, points3D_cam, color):
-        """ plot project velodyne points into camera image """
-        points3D_rot, rm = align_vector_to_zaxis(points3D_cam, np.array([0, 1, 0]))
+        """ get polygon from point cloud """
+        points3D_rot, rm = align_vector_to_zaxis(
+            points3D_cam, np.array([0, 1, 0]))
         points3D_rot_ = np.ascontiguousarray(points3D_rot[:, :3])
-        logging.info("Extracting Polygons from point cloud of size: %d", points3D_rot.shape[0])
+        logging.info(
+            "Extracting Polygons from point cloud of size: %d", points3D_rot.shape[0])
         t1 = time.time()
         polygons = extractPolygons(points3D_rot_, **self.polylidar_kwargs)
         t2 = time.time()
-        planes, obstacles = filter_planes_and_holes(polygons, points3D_rot_, self.postprocess)
+        planes, obstacles = filter_planes_and_holes(
+            polygons, points3D_rot_, self.postprocess)
+        logging.info("Number of Planes: %d; Number of obstacles: %d",
+                     len(planes), len(obstacles))
         t3 = time.time()
-        return points3D_rot
+
+        return points3D_rot, rm, planes, obstacles
 
     @staticmethod
     def normalize_data(data, scale=255):
@@ -148,20 +141,21 @@ class KittiGround(object):
         Returns:
             (img, pts2D, pts2D_color, pts3D) -- M X N ndarray image, projected lidar points, color for points, velodyne points
         """
-        imgN = np.asarray(self.get_cam_fn(frame_idx)) # image
-        pts3D_cam, intensity = self.get_velo(frame_idx) # 3D points
-        oxts = self.data_kitti.oxts[frame_idx] # imu
+        imgN = np.asarray(self.get_cam_fn(frame_idx))  # image
+        pts3D_cam, intensity = self.get_velo(frame_idx)  # 3D points
+        oxts = self.data_kitti.oxts[frame_idx]  # imu
 
         # project points
-        pts2D_cam, idx = self.project_points(pts3D_cam)
+        pts2D_cam, idx = project_points(
+            pts3D_cam, self.P_rect, self.img_m, self.img_n)
 
         # filter points outside of image
         pts3D_cam = pts3D_cam[:, idx].T[:, :3]
         intensity = intensity[idx]
 
         pose_cam = self.T_velo_imu @ oxts.T_w_imu
-        print(pose_cam)
-        print("Roll: {:.3f}; Pitch: {:.3f}; Yaw: {:.3f}".format(np.degrees(oxts.packet.roll), np.degrees(oxts.packet.pitch), np.degrees(oxts.packet.yaw)))
+        print("Roll: {:.3f}; Pitch: {:.3f}; Yaw: {:.3f}".format(np.degrees(
+            oxts.packet.roll), np.degrees(oxts.packet.pitch), np.degrees(oxts.packet.yaw)))
 
         if self.view_image['pointcloud']['color'] == 'intensity':
             color = intensity
@@ -175,23 +169,34 @@ class KittiGround(object):
         return imgN, pts2D_cam, color, pts3D_cam
 
     def run(self):
-        vis, pcd = init_vis()
+        if self.view_3D['active']:
+            vis, pcd, all_polys = init_vis()
         for frame_idx in self.frame_iter:
             img, pts2D_cam, color, pts3D_cam = self.load_frame(frame_idx)
-            pts3D_std = self.get_polygon(pts3D_cam, color)
-            img_points = self.plot_points(img, pts2D_cam, color)
+            points3D_rot, poly_rm, planes, obstacles = self.get_polygon(
+                pts3D_cam, color)
+
+            # Write over 2D Image
+            if self.view_image['pointcloud']['active']:
+                img = self.plot_points(img, pts2D_cam, color)
+            if self.view_image['polygons']['active']:
+                plot_planes_and_obstacles(
+                    planes, obstacles, self.P_rect, poly_rm, img, self.img_n, self.img_m)
+
             cv2.imshow(
-                'Image View - {}'.format(self.view_image['cam']), img_points)
-            cv2.waitKey(1)
-            pcd.points = o3d.utility.Vector3dVector(pts3D_std)
-            vis.update_geometry()
+                'Image View - {}'.format(self.view_image['cam']), img)
+            if not self.view_3D['active']:
+                cv2.waitKey(10000)
+            else:
+                cv2.waitKey(1)
+                # Plot 3D Shapes in Open3D
+                pcd.points = o3d.utility.Vector3dVector(points3D_rot)
+                handle_shapes(planes, obstacles, all_polys)
+                vis.update_geometry()
 
-            while(True):
-                vis.poll_events()
-                vis.update_renderer()
-                res = cv2.waitKey(33)
-                if res != -1:
-                    break
-                # print(res)
-
-        # img = self.data_kitti.
+                while(True):
+                    vis.poll_events()
+                    vis.update_renderer()
+                    res = cv2.waitKey(33)
+                    if res != -1:
+                        break
