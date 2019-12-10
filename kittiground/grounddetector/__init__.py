@@ -12,6 +12,7 @@ M2TOCM2 = 10000
 CMTOM = 0.01
 
 ORANGE = [249, 115, 6]
+ORANGE_BGR = [6, 115, 249]
 
 
 def create_3D_coords(poly, height=0):
@@ -120,6 +121,9 @@ def align_vector_to_zaxis(points, vector=np.array([0, 0, 1])):
 def get_point(pi, points):
     return [points[pi, 0], points[pi, 1], points[pi, 2]]
 
+def get_points(point_idxs, points):
+    return points[point_idxs, :]
+
 
 def filter_planes_and_holes(polygons, points, config_pp):
     """Extracts the plane and obstacles returned from polylidar
@@ -141,11 +145,13 @@ def filter_planes_and_holes(polygons, points, config_pp):
     planes = []
     obstacles = []
     for poly in polygons:
-        shell_coords = [get_point(pi, points) for pi in poly.shell]
+        # shell_coords = [get_point(pi, points) for pi in poly.shell]
+        shell_coords = get_points(poly.shell, points)
         outline = Polygon(shell=shell_coords)
-
-        outline = outline.buffer(distance=config_pp['buffer'])
-        outline = outline.simplify(tolerance=config_pp['simplify'])
+        if config_pp['buffer']:
+            outline = outline.buffer(distance=config_pp['buffer'])
+        if config_pp['simplify']:
+            outline = outline.simplify(tolerance=config_pp['simplify'])
         area = outline.area
         if area >= post_filter['plane_area']['min']:
             # Capture the polygon as well as its z height
@@ -155,14 +161,15 @@ def filter_planes_and_holes(polygons, points, config_pp):
             for hole_poly in poly.holes:
                 # Filter by number of obstacle vertices, removes noisy holes
                 if len(hole_poly) > post_filter['hole_vertices']['min']:
-                    shell_coords = [get_point(pi, points) for pi in hole_poly]
+                    shell_coords = get_points(hole_poly, points)
                     outline = Polygon(shell=shell_coords)
                     area = outline.area
                     # filter by area
                     if area >= post_filter['hole_area']['min'] and area < post_filter['hole_area']['max']:
-                        outline = outline.buffer(distance=config_pp['buffer'])
-                        outline = outline.simplify(
-                            tolerance=config_pp['simplify'])
+                        if config_pp['buffer']:
+                            outline = outline.buffer(distance=config_pp['buffer'])
+                        if config_pp['simplify']:
+                            outline = outline.simplify(tolerance=config_pp['simplify'])
                         z_value = shell_coords[0][2]
                         obstacles.append(
                             (create_3D_coords(outline, z_value), z_value))
@@ -240,5 +247,5 @@ def plot_planes_and_obstacles(planes, obstacles, proj_mat, rot_mat, color_image,
 
     color_image = plot_opencv_polys(
         obstacles, color_image, proj_mat, rot_mat, width,
-        height, color=ORANGE,  thickness=thickness)
+        height, color=ORANGE_BGR,  thickness=thickness)
     return color_image

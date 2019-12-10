@@ -79,6 +79,13 @@ def handle_shapes(planes, obstacles, all_polys):
     for plane, plane_height in planes:
         plane_dict = dict(data=plane)
         poly_counter = handle_polygon(plane_dict, all_polys, poly_counter, origin=None)
+    for plane, plane_height in obstacles:
+        plane_dict = dict(data=plane, color=ORANGE)
+        poly_counter = handle_polygon(plane_dict, all_polys, poly_counter, origin=None)
+
+    for i in range(poly_counter, MAX_POLYS):
+        polygon_gl = all_polys[i]
+        polygon_gl.clear()
 
 def init_vis():
     vis = o3d.visualization.Visualizer()

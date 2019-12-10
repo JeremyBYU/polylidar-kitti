@@ -105,25 +105,30 @@ class KittiGround(object):
             c = (int(color[i]), 255, 255)
             cv2.circle(hsv_image, pt_2d, radius, c, -1)
 
-        return cv2.cvtColor(hsv_image, cv2.COLOR_HSV2RGB)
+        return cv2.cvtColor(hsv_image, cv2.COLOR_HSV2BGR)
 
     def get_polygon(self, points3D_cam, color):
         """ get polygon from point cloud """
+        t0 = time.time()
         points3D_rot, rm = align_vector_to_zaxis(
             points3D_cam, np.array([0, 1, 0]))
         points3D_rot_ = np.ascontiguousarray(points3D_rot[:, :3])
-        logging.info(
+        logging.debug(
             "Extracting Polygons from point cloud of size: %d", points3D_rot.shape[0])
         t1 = time.time()
         polygons = extractPolygons(points3D_rot_, **self.polylidar_kwargs)
         t2 = time.time()
         planes, obstacles = filter_planes_and_holes(
             polygons, points3D_rot_, self.postprocess)
-        logging.info("Number of Planes: %d; Number of obstacles: %d",
+        logging.debug("Number of Planes: %d; Number of obstacles: %d",
                      len(planes), len(obstacles))
         t3 = time.time()
 
-        return points3D_rot, rm, planes, obstacles
+        t_rotation = (t1 - t0) * 1000
+        t_polylidar = (t2 - t1) * 1000
+        t_polyfilter = (t3 - t2) * 1000
+        times = (t_rotation, t_polylidar, t_polyfilter)
+        return points3D_rot, rm, planes, obstacles, times
 
     @staticmethod
     def normalize_data(data, scale=255):
@@ -141,7 +146,7 @@ class KittiGround(object):
         Returns:
             (img, pts2D, pts2D_color, pts3D) -- M X N ndarray image, projected lidar points, color for points, velodyne points
         """
-        imgN = np.asarray(self.get_cam_fn(frame_idx))  # image
+        imgN = cv2.cvtColor(np.asarray(self.get_cam_fn(frame_idx)), cv2.COLOR_RGB2BGR)  # image
         pts3D_cam, intensity = self.get_velo(frame_idx)  # 3D points
         oxts = self.data_kitti.oxts[frame_idx]  # imu
 
@@ -172,9 +177,17 @@ class KittiGround(object):
         if self.view_3D['active']:
             vis, pcd, all_polys = init_vis()
         for frame_idx in self.frame_iter:
+            # load image and point cloud
             img, pts2D_cam, color, pts3D_cam = self.load_frame(frame_idx)
-            points3D_rot, poly_rm, planes, obstacles = self.get_polygon(
+            # extract plane-like polygons
+            points3D_rot, poly_rm, planes, obstacles, times = self.get_polygon(
                 pts3D_cam, color)
+            # Get timing information
+            (t_rotation, t_polylidar, t_polyfilter) = times
+            # Log timing
+            logging.info("Execution time - PC Rotation: %.1f; Polylidar: %.1f; Plane Filtering: %.1f",
+                         t_rotation, t_polylidar, t_polyfilter)
+            print()
 
             # Write over 2D Image
             if self.view_image['pointcloud']['active']:
