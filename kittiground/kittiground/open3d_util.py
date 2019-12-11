@@ -2,6 +2,8 @@ import numpy as np
 import open3d as o3d
 import time
 
+from kittiground import EXTRINSICS
+
 
 MAX_POLYS = 10
 ORANGE = (255/255, 188/255, 0)
@@ -87,9 +89,22 @@ def handle_shapes(planes, obstacles, all_polys):
         polygon_gl = all_polys[i]
         polygon_gl.clear()
 
-def init_vis():
+
+def set_initial_view(vis, extrinsics=EXTRINSICS):
+    ctr = vis.get_view_control()
+    camera_params = ctr.convert_to_pinhole_camera_parameters()
+    # print(camera_params.intrinsic.intrinsic_matrix)
+    # print(camera_params.extrinsic)
+    camera_params.extrinsic = EXTRINSICS
+    ctr.convert_from_pinhole_camera_parameters(camera_params)
+
+def init_vis(fov_step=-40, width=1242, height=int(375*2)):
     vis = o3d.visualization.Visualizer()
-    vis.create_window()
+    vis.create_window("3D Viewer", width, height)
+    
+    # print("Field of view (before changing) %.2f" % ctr.get_field_of_view())
+    # ctr.change_field_of_view(step=fov_step)
+    # print("Field of view (after changing) %.2f" % ctr.get_field_of_view())
 
     # create point cloud
     pcd = o3d.geometry.PointCloud()

@@ -2,7 +2,7 @@
 name: Default settings for polygon extraction of KITTI dataset
 data_folder: "data" # base folder containing KITTI data
 date: "2011_09_26" # date of drive
-drive: "0005" # drive number, #0093 
+drive: "0093" # drive number, #0093 
 cam: 'cam2'
 pointcloud: 
   downsample: 2
@@ -17,15 +17,16 @@ view_image: # Settings for image viewer
   show_pointcloud: false
   show_polygons: true
 view_3D: # Settings for 3D point cloud viewer
-  active: true
+  active: false
+interactive: false # wait for human key press
 polygon: # Settings for polygons extraction
   polylidar: # Parameters we send to polylidar. Determine plane and polygon extracton from point clouds.
     lmax: 1.25 # maximum distance between points in plane for spatial connection
     zThresh: 0.03 # triangles with z-height less than this have normal filtering skipped. For sensor noise.
     normThresh: 0.98 # triangles whose normal is greater than X degrees are filtered acos(tri_norm * [0,0,1])
     normThreshMin: 0.96 # mininum level of planarity needed
-    minTriangles : 250
-    minHoleVertices : 6
+    minTriangles : 250 # mininum number of triangles in a plane
+    minHoleVertices : 6 # mininum number of vertices in a hole to return
     alpha: 0.0 # must be set to 0.0 if using lmax
   postprocess: # post processing of polygons returned from polylidar for ground/obstacle identification
     filter: # obstacles must have these characteristics
@@ -39,4 +40,8 @@ polygon: # Settings for polygons extraction
       num_planes_allowed: 1
     positive_buffer: 0.01
     buffer: 0.3 # m, rounded edge buffer
-    simplify: 0.2  # m, simplify edges 
+    simplify: 0.2  # m, simplify edges
+record:
+  active: true # do we want to actively record a video
+  directory: "data" # what directory to save the mp4
+  stacked: true # whether to stack 2D Viewer and 3D Viewer images

@@ -51,7 +51,7 @@ Polylidar extracts all "flat" surfaces that are connected as polygons. However n
 
 ## Notes
 
-Copy this to your clipboard.  Paste (Ctrl-V) into Open3D to get the correct view
+Copy this to your clipboard (including braces).  Paste (Ctrl-V) into Open3D to get the correct view. I cant find a way to programatically do this. You can always manually adjust the view in the 3D Viewer.
 
 ```
 {
@@ -63,16 +63,24 @@ Copy this to your clipboard.  Paste (Ctrl-V) into Open3D to get the correct view
 		{
 			"boundingbox_max" : [ 10.0, 20.0, 1.0 ],
 			"boundingbox_min" : [ -10.0, -0.059999999999999998, -1.6299999999999999 ],
-			"field_of_view" : 60.0,
-			"front" : [ -0.002797466300819589, -0.93017941771777879, 0.36709457233322029 ],
-			"lookat" : [ 0.0, 9.9700000000000006, -0.31499999999999995 ],
-			"up" : [ 0.015936993373838547, 0.36700791577643127, 0.93008128784512278 ],
-			"zoom" : 0.45999999999999974
+			"field_of_view" : 59.999999999999993,
+			"front" : [ 0.023535657203938892, -0.76754313746794567, 0.6405650669259455 ],
+			"lookat" : [ -0.027640775295681749, 11.82180199180485, -0.098162403753171285 ],
+			"up" : [ 0.015599825759222748, 0.64094650338837789, 0.76742701622401466 ],
+			"zoom" : 0.50000000127598909
 		}
 	],
 	"version_major" : 1,
 	"version_minor" : 0
 }
+```
+
+Extriniscs:
+```
+[[0.99930320 0.02150350 -0.03050756 0.02921623]
+ [-0.00203160 -0.78481335 -0.61972887 10.79278225]
+ [-0.03726908 0.61935903 -0.78422281 10.95042993]
+ [0.00000000 0.00000000 0.00000000 1.00000000]]
 ```
 
 

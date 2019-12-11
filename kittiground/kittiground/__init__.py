@@ -8,8 +8,9 @@ import cv2
 import numpy as np
 import open3d as o3d
 
-from kittiground.kittiground.open3d_util import init_vis, handle_shapes
-from kittiground.grounddetector import filter_planes_and_holes2, plot_planes_and_obstacles, project_points, get_polygon
+from kittiground import EXTRINSICS, IMG_WIDTH, IMG_HEIGHT
+from kittiground.kittiground.open3d_util import init_vis, handle_shapes, set_initial_view
+from kittiground.grounddetector import filter_planes_and_holes2, plot_planes_and_obstacles, project_points, get_polygon, plot_points
 
 np.set_printoptions(suppress=True,
                     formatter={'float_kind': '{:.8f}'.format})
@@ -40,6 +41,9 @@ class KittiGround(object):
         self.view_3D = config['view_3D']
         self.polylidar_kwargs = config['polygon']['polylidar']
         self.postprocess = config['polygon']['postprocess']
+        self.record = config['record']
+        self.record['fpath'] = str(Path(self.record['directory']) / "{}_{}.mp4".format(self.date, self.drive))
+        self.interactive = config['interactive']
 
         self.load_kitti(self.data_folder, self.date,
                         self.drive, frames=self.frames)
@@ -52,8 +56,8 @@ class KittiGround(object):
                      self.data_folder, self.date, self.drive)
         self.load_projections(self.cam)
         self.fix_imu()
-        self.img_n = 1242
-        self.img_m = 375
+        self.img_n = IMG_WIDTH
+        self.img_m = IMG_HEIGHT
         self.fix_missing_velo()
 
     def fix_missing_velo(self):
@@ -138,17 +142,6 @@ class KittiGround(object):
         intensity_filt = np.ascontiguousarray(intensity[idx])
         return pts3D_cam_rect_filt, intensity_filt
 
-    @staticmethod
-    def plot_points(image, points, color):
-        """ plot projected velodyne points into camera image """
-        hsv_image = cv2.cvtColor(image, cv2.COLOR_BGR2HSV)
-        radius = 2
-        for i in range(points.shape[1]):
-            pt_2d = (points[0, i], points[1, i])
-            c = (int(color[i]), 255, 255)
-            cv2.circle(hsv_image, pt_2d, radius, c, -1)
-
-        return cv2.cvtColor(hsv_image, cv2.COLOR_HSV2BGR)
 
     @staticmethod
     def normalize_data(data, scale=255, data_min=None, data_max=None):
@@ -256,6 +249,13 @@ class KittiGround(object):
     def run(self):
         if self.view_3D['active']:
             vis, pcd, all_polys = init_vis()
+
+        # If configured to record video then prepare the writer
+        if self.record['active']:
+            record_frame_width = IMG_WIDTH
+            record_frame_height = IMG_HEIGHT * 3 if self.record['stacked'] and self.view_3D['active'] else IMG_HEIGHT
+            out_vid = cv2.VideoWriter(self.record['fpath'], cv2.VideoWriter_fourcc('M','J','P','G'), 10, (record_frame_width,record_frame_height))
+
         for frame_idx in self.frame_iter:
             # load image and point cloud
             try:
@@ -275,7 +275,7 @@ class KittiGround(object):
 
             # Write over 2D Image
             if self.view_image['show_pointcloud']:
-                img = self.plot_points(img, pts2D_cam, color)
+                img = plot_points(img, pts2D_cam, color)
             if self.view_image['show_polygons']:
                 plot_planes_and_obstacles(
                     planes, obstacles, self.P_rect, poly_rm, img, self.img_n, self.img_m)
@@ -284,7 +284,15 @@ class KittiGround(object):
                 cv2.imshow(
                     'Image View - {}'.format(self.cam), img)
                 if not self.view_3D['active']:
-                    cv2.waitKey(10000)
+                    # Record frame for video
+                    if self.record['active']:
+                        out_vid.write(img)
+                    
+                    if self.interactive:
+                        cv2.waitKey(10000)
+                    else:
+                        cv2.waitKey(1)
+                    
             if self.view_3D['active']:
                 cv2.waitKey(1)
                 # Plot 3D Shapes in Open3D
@@ -294,8 +302,19 @@ class KittiGround(object):
                 pcd.points = o3d.utility.Vector3dVector(points3D_rot)
                 handle_shapes(planes, obstacles, all_polys)
                 vis.update_geometry()
+                vis.update_renderer()
 
-                while(True):
+                if frame_idx == 0:
+                    set_initial_view(vis)
+
+                # capture image of viewer
+                if self.record['active']:
+                    image_3D = (np.asarray(vis.capture_screen_float_buffer(True)) * 255).astype(np.uint8)
+                    stacked_image = np.vstack((img, image_3D))
+                    out_vid.write(stacked_image)
+    
+                # wait for user press a key on opencv image
+                while(self.interactive):
                     vis.poll_events()
                     vis.update_renderer()
                     res = cv2.waitKey(33)

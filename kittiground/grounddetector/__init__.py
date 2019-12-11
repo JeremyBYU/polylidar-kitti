@@ -106,6 +106,17 @@ def rotate_points(points, rot):
 #     return normals
 
 
+def plot_points(image, points, color):
+    """ plot projected velodyne points into camera image """
+    hsv_image = cv2.cvtColor(image, cv2.COLOR_BGR2HSV)
+    radius = 2
+    for i in range(points.shape[1]):
+        pt_2d = (points[0, i], points[1, i])
+        c = (int(color[i]), 255, 255)
+        cv2.circle(hsv_image, pt_2d, radius, c, -1)
+
+    return cv2.cvtColor(hsv_image, cv2.COLOR_HSV2BGR)
+
 def align_vector_to_zaxis(points, vector=np.array([0, 0, 1])):
     """
     Aligns z axis frame to chosen vector
