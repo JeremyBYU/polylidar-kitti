@@ -1,5 +1,6 @@
 import time
 import logging
+from pathlib import Path
 
 import pykitti
 from pykitti.utils import rotz, OxtsData, transform_from_rot_trans
@@ -7,15 +8,14 @@ import cv2
 import numpy as np
 import open3d as o3d
 
-from polylidar import extractPolygons
 from kittiground.kittiground.open3d_util import init_vis, handle_shapes
-from kittiground.grounddetector import align_vector_to_zaxis, filter_planes_and_holes2, plot_planes_and_obstacles, project_points
+from kittiground.grounddetector import filter_planes_and_holes2, plot_planes_and_obstacles, project_points, get_polygon
 
 np.set_printoptions(suppress=True,
                     formatter={'float_kind': '{:.8f}'.format})
 
 
-def moving_average(a, n=3, pad_start=None) :
+def moving_average(a, n=3, pad_start=None):
     ret = np.cumsum(a, dtype=float)
     ret[n:] = ret[n:] - ret[:-n]
     if pad_start is not None:
@@ -25,6 +25,7 @@ def moving_average(a, n=3, pad_start=None) :
         return ret
     else:
         return ret[n - 1:] / n
+
 
 class KittiGround(object):
     def __init__(self, config):
@@ -47,14 +48,33 @@ class KittiGround(object):
 
     def load_kitti(self, data_folder: str, date: str, drive: str, **kwargs):
         self.data_kitti = pykitti.raw(data_folder, date, drive, **kwargs)
-        # print(self.data_kitti.calib)
-        # print(dir(self.data_kitti.calib))
+        logging.info("Loading KITTI Dataset from dir: %r; date: %r, drive: %r",
+                     self.data_folder, self.date, self.drive)
         self.load_projections(self.cam)
         self.fix_imu()
         self.img_n = 1242
         self.img_m = 375
+        self.fix_missing_velo()
+
+    def fix_missing_velo(self):
+        """Fix issue with pykitti not handling missing velodyne data (files)
+        """
+        velo_frames = [int(Path(fpath).stem)
+                       for fpath in self.data_kitti.velo_files]
+        missing_frames = sorted(
+            set(range(velo_frames[0], velo_frames[-1])) - set(velo_frames))
+        # insert dummy frames, will throw exception when reading
+        velo_files = self.data_kitti.velo_files.copy()
+        for missing_frame in missing_frames:
+            velo_files.insert(missing_frame, "BOGUS_FILE_WILL_THROW_EXCEPTION")
+        self.data_kitti.velo_files = velo_files
 
     def load_projections(self, camN: str):
+        """Loads projections for the camera of interest
+
+        Arguments:
+            camN {str} -- Camera cam0, cam1, cam2, cam3
+        """
         self.R00 = self.data_kitti.calib.R_rect_00
         if camN == "cam0":
             T_cam_velo = self.data_kitti.calib.T_cam0_velo
@@ -95,8 +115,17 @@ class KittiGround(object):
         self.data_kitti.oxts = new_oxts
 
     def get_velo(self, frame_idx):
+        """Gets veldoyne data of the frame index of interest
+
+        Arguments:
+            frame_idx {int} -- Frame index
+
+        Returns:
+            (ndarray, ndarray) -- Point cloud in the camN frame, corresponding intensity
+        """
         pts3D_velo_unrectified = self.data_kitti.get_velo(frame_idx)
-        pts3D_velo_unrectified = self.downsamle_pc(pts3D_velo_unrectified,self.pointcloud['downsample'])
+        pts3D_velo_unrectified = self.downsamle_pc(
+            pts3D_velo_unrectified, self.pointcloud['downsample'])
         # create copy of intensity data
         intensity = np.copy(pts3D_velo_unrectified[:, 3])
         # use intensity data to hold 1 hordiante for homgoneous transfrom
@@ -111,7 +140,7 @@ class KittiGround(object):
 
     @staticmethod
     def plot_points(image, points, color):
-        """ plot project velodyne points into camera image """
+        """ plot projected velodyne points into camera image """
         hsv_image = cv2.cvtColor(image, cv2.COLOR_BGR2HSV)
         radius = 2
         for i in range(points.shape[1]):
@@ -120,29 +149,6 @@ class KittiGround(object):
             cv2.circle(hsv_image, pt_2d, radius, c, -1)
 
         return cv2.cvtColor(hsv_image, cv2.COLOR_HSV2BGR)
-
-    def get_polygon(self, points3D_cam, color):
-        """ get polygon from point cloud """
-        t0 = time.time()
-        points3D_rot, rm = align_vector_to_zaxis(
-            points3D_cam, np.array([0, 1, 0]))
-        points3D_rot_ = np.ascontiguousarray(points3D_rot[:, :3])
-        logging.debug(
-            "Extracting Polygons from point cloud of size: %d", points3D_rot.shape[0])
-        t1 = time.time()
-        polygons = extractPolygons(points3D_rot_, **self.polylidar_kwargs)
-        t2 = time.time()
-        planes, obstacles = filter_planes_and_holes2(
-            polygons, points3D_rot_, self.postprocess)
-        logging.debug("Number of Planes: %d; Number of obstacles: %d",
-                      len(planes), len(obstacles))
-        t3 = time.time()
-
-        t_rotation = (t1 - t0) * 1000
-        t_polylidar = (t2 - t1) * 1000
-        t_polyfilter = (t3 - t2) * 1000
-        times = (t_rotation, t_polylidar, t_polyfilter)
-        return points3D_rot, rm, planes, obstacles, times
 
     @staticmethod
     def normalize_data(data, scale=255, data_min=None, data_max=None):
@@ -174,8 +180,8 @@ class KittiGround(object):
         intensity = intensity[idx]
 
         pose_cam = self.T_velo_imu @ oxts.T_w_imu
-        print("Roll: {:.3f}; Pitch: {:.3f}; Yaw: {:.3f}".format(np.degrees(
-            oxts.packet.roll), np.degrees(oxts.packet.pitch), np.degrees(oxts.packet.yaw)))
+        logging.debug("Roll: %.3f; Pitch: %.3f; Yaw: %.3f", np.degrees(
+            oxts.packet.roll), np.degrees(oxts.packet.pitch), np.degrees(oxts.packet.yaw))
 
         if self.pointcloud['color'] == 'intensity':
             color = intensity
@@ -191,13 +197,12 @@ class KittiGround(object):
             z_height = -pts3D_cam[:, 1]
             color = z_height
 
-        print(np.min(color), np.max(color))
         color = self.normalize_data(color)
         if self.pointcloud['outlier_removal']:
             t0 = time.time()
             # points3D_rot = points3D_rot[:400, :]
             mask = self.outlier_removal(pts3D_cam)
-            pts3D_cam = pts3D_cam[~mask,:]
+            pts3D_cam = pts3D_cam[~mask, :]
             t1 = time.time()
             t_point_filter = (t1 - t0) * 1000
         else:
@@ -207,6 +212,9 @@ class KittiGround(object):
 
     @staticmethod
     def outlier_removal(pc, stable_dist=0.1):
+        """Remove outliers from a cpoint cloud
+        Points on a sweeping beam scan should be near eachother
+        """
         t0 = time.time()
         # shift point cloud
         pc_shift = np.roll(pc, -1, axis=0)
@@ -218,7 +226,8 @@ class KittiGround(object):
 
         # TODO need outlier removal for average
         stable_dist_array = np.clip(diff_norm, 0.01, diff_norm)
-        stable_dist_array = moving_average(stable_dist_array, n=10, pad_start=stable_dist)
+        stable_dist_array = moving_average(
+            stable_dist_array, n=10, pad_start=stable_dist)
         # print(stable_dist_array)
         stable_dist_array = np.clip(stable_dist_array, 0.02, stable_dist) * 1.5
         # print(stable_dist_array)
@@ -228,7 +237,7 @@ class KittiGround(object):
         pc_pattern = diff_norm < stable_dist_array
 
         t1 = time.time()
-        print("Time: {}".format((t1-t0) * 1000))
+        # print("Time: {}".format((t1-t0) * 1000))
 
         # TODO make fast stencil operator
         for i in range(4, pc_pattern.shape[0]-6):
@@ -239,6 +248,7 @@ class KittiGround(object):
                 # print(new_pattern)
 
         return mask
+
     @staticmethod
     def downsamle_pc(pc, ds=2):
         return pc[::ds, :]
@@ -248,21 +258,20 @@ class KittiGround(object):
             vis, pcd, all_polys = init_vis()
         for frame_idx in self.frame_iter:
             # load image and point cloud
-            img, pts2D_cam, color, pts3D_cam, mask = self.load_frame(frame_idx)
+            try:
+                img, pts2D_cam, color, pts3D_cam, mask = self.load_frame(
+                    frame_idx)
+            except Exception:
+                logging.warn(
+                    "Missing velodyne point cloud for frame, skipping...")
+                continue
             # extract plane-like polygons
-            points3D_rot, poly_rm, planes, obstacles, times = self.get_polygon(
-                pts3D_cam, color)
-            # Get timing information
+            points3D_rot, poly_rm, planes, obstacles, times = get_polygon(pts3D_cam, self.polylidar_kwargs, self.postprocess)
+            # Get and print timing information
             (t_rotation, t_polylidar, t_polyfilter) = times
-            # t0 = time.time()
-            # # points3D_rot = points3D_rot[:400, :]
-            # mask = self.outlier_removal(points3D_rot)
-            # t1 = time.time()
-            # t_point_filter = (t1 - t0) * 1000
-            # Log timing
-            logging.info("Execution time - PC Rotation: %.1f; Polylidar: %.1f; Plane Filtering: %.1f",
-                         t_rotation, t_polylidar, t_polyfilter)
-            print()
+            logging.info("Frame idx: %d; Execution time(ms) - PC Rotation: %.1f; Polylidar: %.1f; Plane Filtering: %.1f",
+                         frame_idx, t_rotation, t_polylidar, t_polyfilter)
+            # print()
 
             # Write over 2D Image
             if self.view_image['show_pointcloud']:
