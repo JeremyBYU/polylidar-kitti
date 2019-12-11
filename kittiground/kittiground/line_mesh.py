@@ -5,8 +5,11 @@ See:
     Open3D Github Pull Request - https://github.com/intel-isl/Open3D/pull/738
     Other Framework Issues - https://github.com/openframeworks/openFrameworks/issues/3460
 
-This module aims to solve that by converting a line into a triangular mesh (which has thickness)
+This module aims to solve this by converting a line into a triangular mesh (which has thickness)
 The basic idea is to create a cylinder for each line segment, translate it, and then rotate it.
+
+License: MIT
+
 """
 import numpy as np
 import open3d as o3d
@@ -34,13 +37,13 @@ def normalized(a, axis=-1, order=2):
 
 class LineMesh(object):
     def __init__(self, points, lines=None, colors=[0, 1, 0], radius=0.15):
-        """Creates a mesh line
+        """Creates a line represented as sequence of cylinder triangular meshes
 
         Arguments:
             points {ndarray} -- Numpy array of ponts Nx3.
 
         Keyword Arguments:
-            lines {list[list] or None} -- List of point index pairs denoting line segments. If None, implicit lines from points. (default: {None})
+            lines {list[list] or None} -- List of point index pairs denoting line segments. If None, implicit lines from ordered pairwise points. (default: {None})
             colors {list} -- list of colors, or single color of the line (default: {[0, 1, 0]})
             radius {float} -- radius of cylinder (default: {0.15})
         """
@@ -118,7 +121,7 @@ def main():
     line_mesh1 = LineMesh(points, lines, colors, radius=0.02)
     line_mesh1_geoms = line_mesh1.cylinder_segments
 
-    # Create Line Mesh 1
+    # Create Line Mesh 2
     points = np.array(points) + [0, 2, 0]
     line_mesh2 = LineMesh(points, radius=0.03)
     line_mesh2_geoms = line_mesh2.cylinder_segments
