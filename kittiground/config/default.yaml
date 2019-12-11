@@ -2,7 +2,7 @@
 name: Default settings for polygon extraction of KITTI dataset
 data_folder: "data" # base folder containing KITTI data
 date: "2011_09_26" # date of drive
-drive: "0093" # drive number 
+drive: "0002" # drive number, #0093 
 frames:  # which frames
   # - 0   # start index
   # - 10  # end index
@@ -20,22 +20,21 @@ view_3D: # Settings for 3D point cloud viewer
 polygon: # Settings for polygons extraction
   polylidar: # Parameters we send to polylidar. Determine plane and polygon extracton from point clouds.
     lmax: 1.50 # maximum distance between points in plane for spatial connection
-    zThresh: 0.06 # triangles with z-height less than this have normal filtering skipped. For sensor noise.
-    normThresh: 0.95 # triangles whose normal is greater than X degrees are filtered acos(tri_norm * [0,0,1])
-    normThreshMin: 0.7 # mininum level of planarity needed
+    zThresh: 0.03 # triangles with z-height less than this have normal filtering skipped. For sensor noise.
+    normThresh: 0.98 # triangles whose normal is greater than X degrees are filtered acos(tri_norm * [0,0,1])
+    normThreshMin: 0.96 # mininum level of planarity needed
+    minTriangles : 500
+    minHoleVertices : 6
     alpha: 0.0 # must be set to 0.0 if using lmax
-  # ground_normal: # Settings used to estimate normal of ground plane in point cloud.
-  #                # This is used to rotate the point cloud such that ground normal aligns with the z-axis
-  #   test: 1
   postprocess: # post processing of polygons returned from polylidar for ground/obstacle identification
     filter: # obstacles must have these characteristics
       hole_area:
         min: 0.5   # m^2
-        max: 10 # m^2
+        max: 40 # m^2
       hole_vertices:
         min: 3
       plane_area:
-        min: 49 # m^2
-    positive_buffer: 0.05
-    buffer: 0.4 # m, rounded edge buffer
-    simplify: 0.3  # m, simplify edges 
+        min: 40 # m^2
+    positive_buffer: 0.075
+    buffer: 0.3 # m, rounded edge buffer
+    simplify: 0.2  # m, simplify edges 

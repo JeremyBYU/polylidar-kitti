@@ -182,12 +182,16 @@ def filter_planes_and_holes2(polygons, points, config_pp):
         shell_coords = get_points(poly.shell, points)
         hole_coords = [get_points(hole, points) for hole in poly.holes]
         poly_shape = Polygon(shell=shell_coords, holes=hole_coords)
+        area = poly_shape.area
+        if area < post_filter['plane_area']['min']:
+            continue
         z_value = shell_coords[0][2]
         # Perform 2D geometric operations
         if config_pp['buffer'] or config_pp['positive_buffer']:
             # poly_shape = poly_shape.buffer(-config_pp['buffer'], 1, join_style=JOIN_STYLE.mitre).buffer(config_pp['buffer'], 1, join_style=JOIN_STYLE.mitre)
             poly_shape = poly_shape.buffer(config_pp['positive_buffer'], 1, join_style=JOIN_STYLE.mitre)
-            poly_shape = poly_shape.buffer(distance=-config_pp['buffer'])
+            poly_shape = poly_shape.buffer(distance=-config_pp['buffer'] * 3)
+            poly_shape = poly_shape.buffer(distance=config_pp['buffer'] * 2)
         if config_pp['simplify']:
             poly_shape = poly_shape.simplify(tolerance=config_pp['simplify'])
         
@@ -195,7 +199,10 @@ def filter_planes_and_holes2(polygons, points, config_pp):
         # Check for this situation and handle it
         all_poly_shapes = [poly_shape]
         if poly_shape.geom_type == 'MultiPolygon':
-            all_poly_shapes = poly_shape.geoms
+            all_poly_shapes = list(poly_shape.geoms)
+            all_poly_shapes = sorted(all_poly_shapes, key=lambda geom: geom.area, reverse=True)
+            all_poly_shapes = all_poly_shapes[:1]
+
         # iteratre through every polygons and check for plane extraction
         for poly_shape in all_poly_shapes:
             area = poly_shape.area

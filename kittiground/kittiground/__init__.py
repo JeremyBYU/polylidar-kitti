@@ -15,6 +15,17 @@ np.set_printoptions(suppress=True,
                     formatter={'float_kind': '{:.8f}'.format})
 
 
+def moving_average(a, n=3, pad_start=None) :
+    ret = np.cumsum(a, dtype=float)
+    ret[n:] = ret[n:] - ret[:-n]
+    if pad_start is not None:
+        ret = ret / n
+        for i in range(n-1):
+            ret[i] = pad_start
+        return ret
+    else:
+        return ret[n - 1:] / n
+
 class KittiGround(object):
     def __init__(self, config):
         super().__init__()
@@ -121,7 +132,7 @@ class KittiGround(object):
         planes, obstacles = filter_planes_and_holes2(
             polygons, points3D_rot_, self.postprocess)
         logging.debug("Number of Planes: %d; Number of obstacles: %d",
-                     len(planes), len(obstacles))
+                      len(planes), len(obstacles))
         t3 = time.time()
 
         t_rotation = (t1 - t0) * 1000
@@ -137,7 +148,7 @@ class KittiGround(object):
         data_max = np.max(data)
         return ((data - data_min) / (data_max - data_min) * scale).astype(np.uint8)
 
-    def load_frame(self, frame_idx: int):
+    def load_frame(self, frame_idx: int, noise_removal=True):
         """Load frame from kitti
 
         Arguments:
@@ -146,7 +157,8 @@ class KittiGround(object):
         Returns:
             (img, pts2D, pts2D_color, pts3D) -- M X N ndarray image, projected lidar points, color for points, velodyne points
         """
-        imgN = cv2.cvtColor(np.asarray(self.get_cam_fn(frame_idx)), cv2.COLOR_RGB2BGR)  # image
+        imgN = cv2.cvtColor(np.asarray(self.get_cam_fn(
+            frame_idx)), cv2.COLOR_RGB2BGR)  # image
         pts3D_cam, intensity = self.get_velo(frame_idx)  # 3D points
         oxts = self.data_kitti.oxts[frame_idx]  # imu
 
@@ -170,20 +182,73 @@ class KittiGround(object):
             color = distance
 
         color = self.normalize_data(color)
+        if noise_removal:
+            t0 = time.time()
+            # points3D_rot = points3D_rot[:400, :]
+            mask = self.pc_diff(pts3D_cam)
+            pts3D_cam = pts3D_cam[~mask,:]
+            t1 = time.time()
+            t_point_filter = (t1 - t0) * 1000
+        else:
+            mask = np.zeros(color.shape, dtype=np.bool)
 
-        return imgN, pts2D_cam, color, pts3D_cam
+        return imgN, pts2D_cam, color, pts3D_cam, mask
+
+    @staticmethod
+    def pc_diff(pc, stable_dist=0.1, unstable_dist=0.2):
+        t0 = time.time()
+        # shift point cloud
+        pc_shift = np.roll(pc, -1, axis=0)
+        # computer distance between points next to eachother on single scan
+        diff = pc - pc_shift
+        diff_norm = np.linalg.norm(diff, axis=1)
+        # this will hold the mask of outlier points
+        mask = np.zeros_like(diff_norm, dtype=np.bool)
+
+        # TODO need outlier removal for average
+        stable_dist_array = np.clip(diff_norm, 0.01, diff_norm)
+        stable_dist_array = moving_average(stable_dist_array, n=10, pad_start=stable_dist)
+        # print(stable_dist_array)
+        stable_dist_array = np.clip(stable_dist_array, 0.02, stable_dist) * 1.5
+        # print(stable_dist_array)
+        # This is the patter we are looking for
+        want_pattern = np.array(
+            [True, True, False, False, True, True], dtype=np.bool)
+        pc_pattern = diff_norm < stable_dist_array
+
+        t1 = time.time()
+        print("Time: {}".format((t1-t0) * 1000))
+
+        # TODO make fast stencil operator
+        for i in range(4, pc_pattern.shape[0]-6):
+            new_pattern = pc_pattern[i:i+6]
+            if np.array_equal(want_pattern, new_pattern):
+                mask[i+3] = True
+                # print("Found one")
+                # print(new_pattern)
+
+        return mask
+    @staticmethod
+    def downsamle_pc(pc):
+        return pc[::2, :]
 
     def run(self):
         if self.view_3D['active']:
             vis, pcd, all_polys = init_vis()
         for frame_idx in self.frame_iter:
             # load image and point cloud
-            img, pts2D_cam, color, pts3D_cam = self.load_frame(frame_idx)
+            img, pts2D_cam, color, pts3D_cam, mask = self.load_frame(frame_idx)
+            pts3D_cam = self.downsamle_pc(pts3D_cam)
             # extract plane-like polygons
             points3D_rot, poly_rm, planes, obstacles, times = self.get_polygon(
                 pts3D_cam, color)
             # Get timing information
             (t_rotation, t_polylidar, t_polyfilter) = times
+            # t0 = time.time()
+            # # points3D_rot = points3D_rot[:400, :]
+            # mask = self.pc_diff(points3D_rot)
+            # t1 = time.time()
+            # t_point_filter = (t1 - t0) * 1000
             # Log timing
             logging.info("Execution time - PC Rotation: %.1f; Polylidar: %.1f; Plane Filtering: %.1f",
                          t_rotation, t_polylidar, t_polyfilter)
@@ -203,6 +268,9 @@ class KittiGround(object):
             else:
                 cv2.waitKey(1)
                 # Plot 3D Shapes in Open3D
+                # colors = np.zeros_like(points3D_rot)
+                # colors[mask] = [1, 0, 0]
+                # pcd.colors = o3d.utility.Vector3dVector(colors)
                 pcd.points = o3d.utility.Vector3dVector(points3D_rot)
                 handle_shapes(planes, obstacles, all_polys)
                 vis.update_geometry()

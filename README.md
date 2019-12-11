@@ -28,6 +28,10 @@ Please see disclaimers below before using Polylidar with an Intel RealSense came
 
 ## Disclaimers
 
+## TODO
+
+Modify polylidar to filter tiny one off holes
+
 ## Notes
 
 Copy this to your clipboard.  Paste (Ctrl-V) into Open3D to get the correct view
