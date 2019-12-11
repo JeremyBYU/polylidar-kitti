@@ -117,16 +117,16 @@ def plot_points(image, points, color):
 
     return cv2.cvtColor(hsv_image, cv2.COLOR_HSV2BGR)
 
-def align_vector_to_zaxis(points, vector=np.array([0, 0, 1])):
+def align_vector_to_axis(points, vector=np.array([0, 0, 1]), axis=[0, 0, -1], ):
     """
     Aligns z axis frame to chosen vector
     """
     # Shortcut from computing cross product of -Z axis X vector
-    axis = np.cross(vector, np.array([0, 0, -1]))
-    axis = axis / np.linalg.norm(axis)
+    axis_ = np.cross(vector, np.array(axis))
+    axis_ = axis_ / np.linalg.norm(axis_)
     angle = math.acos(-vector[2])
 
-    rm = axis_angle_rm(axis, angle)
+    rm = axis_angle_rm(axis_, angle)
     points_rot = rotate_points(points, rm)
     return points_rot, rm
 
@@ -185,7 +185,7 @@ def get_polygon(points3D_cam, polylidar_kwargs, postprocess_config):
 
     """
     t0 = time.time()
-    points3D_rot, rm = align_vector_to_zaxis(
+    points3D_rot, rm = align_vector_to_axis(
         points3D_cam, np.array([0, 1, 0]))
     points3D_rot_ = np.ascontiguousarray(points3D_rot[:, :3])
     logging.debug(

@@ -9,7 +9,7 @@ import numpy as np
 import open3d as o3d
 
 from kittiground import EXTRINSICS, IMG_WIDTH, IMG_HEIGHT
-from kittiground.kittiground.open3d_util import init_vis, handle_shapes, set_initial_view
+from kittiground.kittiground.open3d_util import init_vis, handle_shapes, set_initial_view, get_extrinsics
 from kittiground.grounddetector import filter_planes_and_holes2, plot_planes_and_obstacles, project_points, get_polygon, plot_points
 
 np.set_printoptions(suppress=True,
@@ -248,6 +248,7 @@ class KittiGround(object):
         return pc[::ds, :]
 
     def run(self):
+        current_extrinsics = EXTRINSICS
         if self.view_3D['active']:
             vis, pcd, all_polys = init_vis()
 
@@ -296,17 +297,17 @@ class KittiGround(object):
                     
             if self.view_3D['active']:
                 cv2.waitKey(1)
-                # Plot 3D Shapes in Open3D
                 # colors = np.zeros_like(points3D_rot)
                 # colors[mask] = [1, 0, 0]
                 # pcd.colors = o3d.utility.Vector3dVector(colors)
+                # Plot 3D Shapes in Open3D
                 pcd.points = o3d.utility.Vector3dVector(points3D_rot)
-                handle_shapes(planes, obstacles, all_polys)
+                all_polys = handle_shapes(vis, planes, obstacles, all_polys)
                 vis.update_geometry()
                 vis.update_renderer()
 
-                if frame_idx == 0:
-                    set_initial_view(vis)
+                # Update view
+                set_initial_view(vis, current_extrinsics)
 
                 # capture image of viewer
                 if self.record['active']:
@@ -319,5 +320,6 @@ class KittiGround(object):
                     vis.poll_events()
                     vis.update_renderer()
                     res = cv2.waitKey(33)
+                    current_extrinsics = get_extrinsics(vis)
                     if res != -1:
                         break

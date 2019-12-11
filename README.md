@@ -15,7 +15,7 @@ Please see disclaimers below before using Polylidar.
 ## Installation
 
 1. Install [conda](https://conda.io/projects/conda/en/latest/) - [Why?](https://medium.freecodecamp.org/why-you-need-python-environments-and-how-to-manage-them-with-conda-85f155f4353c)
-2. `conda create --name kitti python=3.6 && source activate kitti` - Create new virtual python environment
+2. `conda create --name kitti python=3.7 && source activate kitti` - Create new virtual python environment
 3. `git clone --recurse-submodules https://github.com/JeremyBYU/polylidar-kitti.git && cd polylidar-kitti`
 4. `conda install -c conda-forge opencv shapely` - These packages gives an issue for binary dependencies for Windows users, hence why conda should handle it. Use pip if on linux.
 5. `cd thirdparty/polylidar && pip install -e . && cd ../..` - Install polylidar manually because it is not on PyPi.
