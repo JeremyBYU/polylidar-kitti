@@ -2,46 +2,55 @@
 name: Default settings for polygon extraction of KITTI dataset
 data_folder: "data" # base folder containing KITTI data
 date: "2011_09_26" # date of drive
-drive: "0093" # drive number, #0093 
-cam: 'cam2'
-pointcloud: 
-  downsample: 2
-  outlier_removal: true
-  color: "distance" # intensity, height, depth
+drive: "0009" # drive number, #0093 
+cam: 'cam2' # which camera to use, cam0=grey, cam1=grey, cam2=rgb
+interactive: true # wait for human key press to proceed to next frame
 frames:  # which frames
   # - 0   # start index
   # - 10  # end index
   # - 1   # index jump
-view_image: # Settings for image viewer
+
+# Point Cloud Settings
+pointcloud: 
+  downsample: 2 # how much to downsample, 1=No downsample, 2 = Every other, N = Every N points
+  outlier_removal: true # use simple outlier removal on point cloud
+  color: "distance" # colrize point cloud by: intensity, height, distance
+
+# 2D/3D View Settings
+view_image: # Settings for 2D image viewer
   active: true
   show_pointcloud: false
   show_polygons: true
 view_3D: # Settings for 3D point cloud viewer
-  active: false
-interactive: false # wait for human key press
+  active: true
+
+# Polygon Extraction Settings
 polygon: # Settings for polygons extraction
   polylidar: # Parameters we send to polylidar. Determine plane and polygon extracton from point clouds.
-    lmax: 1.25 # maximum distance between points in plane for spatial connection
-    zThresh: 0.03 # triangles with z-height less than this have normal filtering skipped. For sensor noise.
+    lmax: 1.25 # maximum distance (m) between points in plane for spatial connection
+    zThresh: 0.03 # triangles with z-height (m) less than this have normal filtering skipped. For sensor noise.
     normThresh: 0.98 # triangles whose normal is greater than X degrees are filtered acos(tri_norm * [0,0,1])
     normThreshMin: 0.96 # mininum level of planarity needed
     minTriangles : 250 # mininum number of triangles in a plane
     minHoleVertices : 6 # mininum number of vertices in a hole to return
     alpha: 0.0 # must be set to 0.0 if using lmax
   postprocess: # post processing of polygons returned from polylidar for ground/obstacle identification
-    filter: # obstacles must have these characteristics
-      hole_area:
+    filter: # Fitler polygons
+      hole_area: # obstacle (holes in polygons) must have these characteristics
         min: 1   # m^2
         max: 40 # m^2
-      hole_vertices:
-        min: 3
-      plane_area:
+      hole_vertices: # obstacles (holes in polygons) must have these characteristics
+        min: 3 # A linear ring has a mininum of 3 vertices
+      plane_area: # planes must have these area
         min: 30 # m^2
-      num_planes_allowed: 1
-    positive_buffer: 0.01
-    buffer: 0.3 # m, rounded edge buffer
-    simplify: 0.2  # m, simplify edges
+      num_planes_allowed: 1 # TODO Only allow this many largest planes through
+    # These parameters correspond to Shapely polygon geometry operations
+    positive_buffer: 0.01 # m, Positvely expand polygon.  Fills in small holes
+    buffer: 0.3 # m, Negative buffer to polygon. Expands holes and constricuts outer hull of polygon
+    simplify: 0.2  # m, simplify edges of polygon
+
+# Recording Settings
 record:
-  active: true # do we want to actively record a video
+  active: false # do we want to actively record a video
   directory: "data" # what directory to save the mp4
   stacked: true # whether to stack 2D Viewer and 3D Viewer images

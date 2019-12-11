@@ -42,7 +42,8 @@ class KittiGround(object):
         self.polylidar_kwargs = config['polygon']['polylidar']
         self.postprocess = config['polygon']['postprocess']
         self.record = config['record']
-        self.record['fpath'] = str(Path(self.record['directory']) / "{}_{}.mp4".format(self.date, self.drive))
+        stacked_str = "_stacked" if self.record['stacked'] and self.view_3D['active'] else ""
+        self.record['fpath'] = str(Path(self.record['directory']) / "{}_{}{}.mp4".format(self.date, self.drive, stacked_str))
         self.interactive = config['interactive']
 
         self.load_kitti(self.data_folder, self.date,
@@ -254,7 +255,7 @@ class KittiGround(object):
         if self.record['active']:
             record_frame_width = IMG_WIDTH
             record_frame_height = IMG_HEIGHT * 3 if self.record['stacked'] and self.view_3D['active'] else IMG_HEIGHT
-            out_vid = cv2.VideoWriter(self.record['fpath'], cv2.VideoWriter_fourcc('M','J','P','G'), 10, (record_frame_width,record_frame_height))
+            out_vid = cv2.VideoWriter(self.record['fpath'], cv2.VideoWriter_fourcc('H','2','6','4'), 10, (record_frame_width,record_frame_height))
 
         for frame_idx in self.frame_iter:
             # load image and point cloud
@@ -287,7 +288,7 @@ class KittiGround(object):
                     # Record frame for video
                     if self.record['active']:
                         out_vid.write(img)
-                    
+
                     if self.interactive:
                         cv2.waitKey(10000)
                     else:
