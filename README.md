@@ -19,7 +19,7 @@ Please see disclaimers below before using Polylidar.
 3. `git clone --recurse-submodules https://github.com/JeremyBYU/polylidar-kitti.git && cd polylidar-kitti`
 4. `conda install -c conda-forge opencv shapely` - These packages gives an issue for binary dependencies for Windows users, hence why conda should handle it. Use pip if on linux.
 5. `cd thirdparty/polylidar && pip install -e . && cd ../..` - Install polylidar manually because it is not on PyPi.
-6. `pip install -e .` - Install any dependencies for this repository (groundetector).
+6. `pip install -e .` - Install any dependencies for this repository (kittiground).
 
 
 ## Running

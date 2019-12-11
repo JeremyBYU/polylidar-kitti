@@ -102,7 +102,7 @@ def init_vis():
     axis_frame = o3d.geometry.TriangleMesh.create_coordinate_frame(size=1.0)
     # Create grid
     grid_ls = o3d.geometry.LineSet()
-    my_grid = grid(size=20, n=30, plane='xy', plane_offset=-1.63, translate=[0, 10, 0])
+    my_grid = grid(size=20, n=20, plane='xy', plane_offset=-1.63, translate=[0, 10, 0])
     set_line(grid_ls, *my_grid)
 
     vis.add_geometry(pcd)

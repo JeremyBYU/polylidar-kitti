@@ -3,38 +3,40 @@ name: Default settings for polygon extraction of KITTI dataset
 data_folder: "data" # base folder containing KITTI data
 date: "2011_09_26" # date of drive
 drive: "0002" # drive number, #0093 
+cam: 'cam2'
+pointcloud: 
+  downsample: 2
+  outlier_removal: true
+  color: "distance" # intensity, height, depth
 frames:  # which frames
   # - 0   # start index
   # - 10  # end index
   # - 1   # index jump
 view_image: # Settings for image viewer
   active: true
-  cam: 'cam2'
-  pointcloud: # project point cloud
-    active: false
-    color: "distance" # intensity, height, depth
-  polygons:
-    active: true
+  show_pointcloud: false
+  show_polygons: true
 view_3D: # Settings for 3D point cloud viewer
   active: true
 polygon: # Settings for polygons extraction
   polylidar: # Parameters we send to polylidar. Determine plane and polygon extracton from point clouds.
-    lmax: 1.50 # maximum distance between points in plane for spatial connection
+    lmax: 1.25 # maximum distance between points in plane for spatial connection
     zThresh: 0.03 # triangles with z-height less than this have normal filtering skipped. For sensor noise.
     normThresh: 0.98 # triangles whose normal is greater than X degrees are filtered acos(tri_norm * [0,0,1])
     normThreshMin: 0.96 # mininum level of planarity needed
-    minTriangles : 500
+    minTriangles : 250
     minHoleVertices : 6
     alpha: 0.0 # must be set to 0.0 if using lmax
   postprocess: # post processing of polygons returned from polylidar for ground/obstacle identification
     filter: # obstacles must have these characteristics
       hole_area:
-        min: 0.5   # m^2
+        min: 1   # m^2
         max: 40 # m^2
       hole_vertices:
         min: 3
       plane_area:
-        min: 40 # m^2
-    positive_buffer: 0.075
+        min: 30 # m^2
+      num_planes_allowed: 1
+    positive_buffer: 0.01
     buffer: 0.3 # m, rounded edge buffer
     simplify: 0.2  # m, simplify edges 

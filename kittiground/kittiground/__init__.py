@@ -34,6 +34,8 @@ class KittiGround(object):
         self.drive: str = config['drive']
         self.frames = config['frames']
         self.view_image = config['view_image']
+        self.cam = config['cam']
+        self.pointcloud = config['pointcloud']
         self.view_3D = config['view_3D']
         self.polylidar_kwargs = config['polygon']['polylidar']
         self.postprocess = config['polygon']['postprocess']
@@ -47,7 +49,7 @@ class KittiGround(object):
         self.data_kitti = pykitti.raw(data_folder, date, drive, **kwargs)
         # print(self.data_kitti.calib)
         # print(dir(self.data_kitti.calib))
-        self.load_projections(self.view_image['cam'])
+        self.load_projections(self.cam)
         self.fix_imu()
         self.img_n = 1242
         self.img_m = 375
@@ -94,6 +96,7 @@ class KittiGround(object):
 
     def get_velo(self, frame_idx):
         pts3D_velo_unrectified = self.data_kitti.get_velo(frame_idx)
+        pts3D_velo_unrectified = self.downsamle_pc(pts3D_velo_unrectified,self.pointcloud['downsample'])
         # create copy of intensity data
         intensity = np.copy(pts3D_velo_unrectified[:, 3])
         # use intensity data to hold 1 hordiante for homgoneous transfrom
@@ -142,13 +145,13 @@ class KittiGround(object):
         return points3D_rot, rm, planes, obstacles, times
 
     @staticmethod
-    def normalize_data(data, scale=255):
+    def normalize_data(data, scale=255, data_min=None, data_max=None):
         """ Normalize data """
-        data_min = np.min(data)
-        data_max = np.max(data)
+        data_min = data_min if data_min else np.min(data)
+        data_max = data_max if data_max else np.max(data)
         return ((data - data_min) / (data_max - data_min) * scale).astype(np.uint8)
 
-    def load_frame(self, frame_idx: int, noise_removal=True):
+    def load_frame(self, frame_idx: int):
         """Load frame from kitti
 
         Arguments:
@@ -174,18 +177,26 @@ class KittiGround(object):
         print("Roll: {:.3f}; Pitch: {:.3f}; Yaw: {:.3f}".format(np.degrees(
             oxts.packet.roll), np.degrees(oxts.packet.pitch), np.degrees(oxts.packet.yaw)))
 
-        if self.view_image['pointcloud']['color'] == 'intensity':
+        if self.pointcloud['color'] == 'intensity':
             color = intensity
-        elif self.view_image['pointcloud']['color'] == 'distance':
+            data_min = 0.0
+            data_max = 1.0
+        elif self.pointcloud['color'] == 'distance':
             distance = np.sqrt(
                 pts3D_cam[:, 0] ** 2 + pts3D_cam[:, 1] ** 2 + pts3D_cam[:, 2] ** 2)
             color = distance
+            data_min = -3
+            data_max = 3
+        else:
+            z_height = -pts3D_cam[:, 1]
+            color = z_height
 
+        print(np.min(color), np.max(color))
         color = self.normalize_data(color)
-        if noise_removal:
+        if self.pointcloud['outlier_removal']:
             t0 = time.time()
             # points3D_rot = points3D_rot[:400, :]
-            mask = self.pc_diff(pts3D_cam)
+            mask = self.outlier_removal(pts3D_cam)
             pts3D_cam = pts3D_cam[~mask,:]
             t1 = time.time()
             t_point_filter = (t1 - t0) * 1000
@@ -195,7 +206,7 @@ class KittiGround(object):
         return imgN, pts2D_cam, color, pts3D_cam, mask
 
     @staticmethod
-    def pc_diff(pc, stable_dist=0.1, unstable_dist=0.2):
+    def outlier_removal(pc, stable_dist=0.1):
         t0 = time.time()
         # shift point cloud
         pc_shift = np.roll(pc, -1, axis=0)
@@ -229,8 +240,8 @@ class KittiGround(object):
 
         return mask
     @staticmethod
-    def downsamle_pc(pc):
-        return pc[::2, :]
+    def downsamle_pc(pc, ds=2):
+        return pc[::ds, :]
 
     def run(self):
         if self.view_3D['active']:
@@ -238,7 +249,6 @@ class KittiGround(object):
         for frame_idx in self.frame_iter:
             # load image and point cloud
             img, pts2D_cam, color, pts3D_cam, mask = self.load_frame(frame_idx)
-            pts3D_cam = self.downsamle_pc(pts3D_cam)
             # extract plane-like polygons
             points3D_rot, poly_rm, planes, obstacles, times = self.get_polygon(
                 pts3D_cam, color)
@@ -246,7 +256,7 @@ class KittiGround(object):
             (t_rotation, t_polylidar, t_polyfilter) = times
             # t0 = time.time()
             # # points3D_rot = points3D_rot[:400, :]
-            # mask = self.pc_diff(points3D_rot)
+            # mask = self.outlier_removal(points3D_rot)
             # t1 = time.time()
             # t_point_filter = (t1 - t0) * 1000
             # Log timing
@@ -255,17 +265,18 @@ class KittiGround(object):
             print()
 
             # Write over 2D Image
-            if self.view_image['pointcloud']['active']:
+            if self.view_image['show_pointcloud']:
                 img = self.plot_points(img, pts2D_cam, color)
-            if self.view_image['polygons']['active']:
+            if self.view_image['show_polygons']:
                 plot_planes_and_obstacles(
                     planes, obstacles, self.P_rect, poly_rm, img, self.img_n, self.img_m)
 
-            cv2.imshow(
-                'Image View - {}'.format(self.view_image['cam']), img)
-            if not self.view_3D['active']:
-                cv2.waitKey(10000)
-            else:
+            if self.view_image['active']:
+                cv2.imshow(
+                    'Image View - {}'.format(self.cam), img)
+                if not self.view_3D['active']:
+                    cv2.waitKey(10000)
+            if self.view_3D['active']:
                 cv2.waitKey(1)
                 # Plot 3D Shapes in Open3D
                 # colors = np.zeros_like(points3D_rot)
