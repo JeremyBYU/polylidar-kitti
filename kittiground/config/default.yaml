@@ -2,7 +2,7 @@
 name: Default settings for polygon extraction of KITTI dataset
 data_folder: "data" # base folder containing KITTI data
 date: "2011_09_26" # date of drive
-drive: "0009" # drive number, #0093 
+drive: "0093" # drive number, #0093 
 cam: 'cam2' # which camera to use, cam0=grey, cam1=grey, cam2=rgb
 interactive: false # wait for human key press to proceed to next frame
 frames:  # which frames
