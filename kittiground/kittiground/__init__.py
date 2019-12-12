@@ -175,20 +175,19 @@ class KittiGround(object):
             distance = np.sqrt(
                 pts3D_cam[:, 0] ** 2 + pts3D_cam[:, 1] ** 2 + pts3D_cam[:, 2] ** 2)
             color = distance
-            data_min = -3
-            data_max = 3
+            data_min = 0
+            data_max = 57
         else:
             z_height = -pts3D_cam[:, 1]
             color = z_height
+            data_min = -1.5
+            data_max = 8
 
         color = self.normalize_data(color)
         if self.pointcloud['outlier_removal']:
-            t0 = time.time()
             # points3D_rot = points3D_rot[:400, :]
             mask = outlier_removal(pts3D_cam)
             pts3D_cam = pts3D_cam[~mask, :]
-            t1 = time.time()
-            t_point_filter = (t1 - t0) * 1000
         else:
             mask = np.zeros(color.shape, dtype=np.bool)
 
