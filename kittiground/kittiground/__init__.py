@@ -9,23 +9,13 @@ import numpy as np
 import open3d as o3d
 
 from kittiground import EXTRINSICS, IMG_WIDTH, IMG_HEIGHT
+from kittiground.kittiground.outlier import outlier_removal
 from kittiground.kittiground.open3d_util import init_vis, handle_shapes, set_initial_view, get_extrinsics
 from kittiground.grounddetector import filter_planes_and_holes2, plot_planes_and_obstacles, project_points, get_polygon, plot_points
 
 np.set_printoptions(suppress=True,
                     formatter={'float_kind': '{:.8f}'.format})
 
-
-def moving_average(a, n=3, pad_start=None):
-    ret = np.cumsum(a, dtype=float)
-    ret[n:] = ret[n:] - ret[:-n]
-    if pad_start is not None:
-        ret = ret / n
-        for i in range(n-1):
-            ret[i] = pad_start
-        return ret
-    else:
-        return ret[n - 1:] / n
 
 
 class KittiGround(object):
@@ -195,55 +185,14 @@ class KittiGround(object):
         if self.pointcloud['outlier_removal']:
             t0 = time.time()
             # points3D_rot = points3D_rot[:400, :]
-            mask = self.outlier_removal(pts3D_cam)
-            pts3D_cam = pts3D_cam[~mask, :]
+            mask = outlier_removal(pts3D_cam)
+            # pts3D_cam = pts3D_cam[~mask, :]
             t1 = time.time()
             t_point_filter = (t1 - t0) * 1000
         else:
             mask = np.zeros(color.shape, dtype=np.bool)
 
         return imgN, pts2D_cam, color, pts3D_cam, mask
-
-    @staticmethod
-    def outlier_removal(pc, stable_dist=0.1):
-        """Remove outliers from a cpoint cloud
-        Points on a sweeping beam scan should be near eachother
-        """
-        t0 = time.time()
-        # shift point cloud
-        pc_shift = np.roll(pc, -1, axis=0)
-        # computer distance between points next to eachother on single scan
-        diff = pc - pc_shift
-        diff_norm = np.linalg.norm(diff, axis=1)
-        # this will hold the mask of outlier points
-        mask = np.zeros_like(diff_norm, dtype=np.bool)
-
-        # TODO need outlier removal for average
-        stable_dist_array = np.clip(diff_norm, 0.01, diff_norm)
-        stable_dist_array = moving_average(
-            stable_dist_array, n=10, pad_start=stable_dist)
-        # print(stable_dist_array)
-        stable_dist_array = np.clip(stable_dist_array, 0.02, stable_dist) * 1.5
-        # print(stable_dist_array)
-        # This is the patter we are looking for
-        want_pattern = np.array(
-            [True, True, False, False, True, True], dtype=np.bool)
-        pc_pattern = diff_norm < stable_dist_array
-
-        t1 = time.time()
-        # print("Time: {}".format((t1-t0) * 1000))
-
-        # TODO make fast stencil operator
-        for i in range(4, pc_pattern.shape[0]-6):
-            new_pattern = pc_pattern[i:i+6]
-            if np.array_equal(want_pattern, new_pattern):
-                mask[i+3] = True
-                # print("Found one")
-                # print(new_pattern)
-        t2 = time.time()
-        # print("Pattern Creating: {:.1f}; Pattern Matching: {:.1f}".format((t1-t0) * 1000, (t2-t1) * 1000))
-
-        return mask
 
     @staticmethod
     def downsamle_pc(pc, ds=2):
@@ -266,7 +215,7 @@ class KittiGround(object):
                 img, pts2D_cam, color, pts3D_cam, mask = self.load_frame(
                     frame_idx)
             except Exception:
-                logging.warn(
+                logging.exception(
                     "Missing velodyne point cloud for frame, skipping...")
                 continue
             # extract plane-like polygons
@@ -299,9 +248,9 @@ class KittiGround(object):
                     
             if self.view_3D['active']:
                 cv2.waitKey(1)
-                # colors = np.zeros_like(points3D_rot)
-                # colors[mask] = [1, 0, 0]
-                # pcd.colors = o3d.utility.Vector3dVector(colors)
+                colors = np.zeros_like(points3D_rot)
+                colors[mask] = [1, 0, 0]
+                pcd.colors = o3d.utility.Vector3dVector(colors)
                 # Plot 3D Shapes in Open3D
                 pcd.points = o3d.utility.Vector3dVector(points3D_rot)
                 all_polys = handle_shapes(vis, planes, obstacles, all_polys)

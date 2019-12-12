@@ -51,4 +51,8 @@ The `default.yaml` contains all settings to run examples.  Comments should be on
 
 Polylidar extracts all "flat" surfaces that are connected as polygons. However nothing is truly flat and sensor measurements are noisy. Parameters guide polylidar in how "flat" a surface is. However these same paremeters that allow some noise and non-flatness also allow false-positives (e.g. the road connects into a sidewalk). This code uses a lot of filtering **outside** of polylidar to help reduce these false positives and make simpler polygons.  
 
+## Notes
+
+A small amount of outlier filtering is performed. For speed up please install `cppyy` -> `pip install cppyy`.
+
 
