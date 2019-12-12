@@ -19,7 +19,6 @@ def run(input):
 
     input is a file path to a yaml configuration file, Default=config/default.yaml
     """
-    click.echo('Hello World!')
     try:
         config = yaml.safe_load(input)
     except yaml.YAMLError as exc:
