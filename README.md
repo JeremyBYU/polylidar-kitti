@@ -1,9 +1,10 @@
 # Polylidar with KITTI Dataset - Ground/Obstacle Detection
 
-This repository contains code and examples for using [Polylidar](https://github.com/JeremyBYU/polylidarv2) on the KITTI dataset to extact ground planes.  The example presented is for ground/obstacle detection with representation as polygons. To learn more about Polylidar and its use cases for concave polygons extraction see it's [repository](https://github.com/JeremyBYU/polylidarv2).
+This repository contains code and examples for using [Polylidar](https://github.com/JeremyBYU/polylidarv2) on the KITTI dataset to extact ground planes from point clouds.  The example presented is for ground/obstacle detection with representation as polygons. To learn more about Polylidar and its use cases for concave polygons extraction see it's [repository](https://github.com/JeremyBYU/polylidarv2).
 
-
-![Example ground and obstacle detection with Polylidar](assets/media/2011_09_26_0005_stacked.gif)
+<p align="center">
+<img src="assets/media/2011_09_26_0005_stacked.gif" alt="Example ground and obstacle detection with Polylidar" style="max-width:100%;">
+</p>
 
 The main components of the code are as follows:
 1. Using `pykitti` to get camera and velodyne lidar data.

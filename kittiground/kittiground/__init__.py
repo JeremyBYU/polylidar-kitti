@@ -240,6 +240,8 @@ class KittiGround(object):
                 mask[i+3] = True
                 # print("Found one")
                 # print(new_pattern)
+        t2 = time.time()
+        # print("Pattern Creating: {:.1f}; Pattern Matching: {:.1f}".format((t1-t0) * 1000, (t2-t1) * 1000))
 
         return mask
 
