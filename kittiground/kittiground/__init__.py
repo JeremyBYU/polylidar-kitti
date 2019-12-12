@@ -186,7 +186,7 @@ class KittiGround(object):
             t0 = time.time()
             # points3D_rot = points3D_rot[:400, :]
             mask = outlier_removal(pts3D_cam)
-            # pts3D_cam = pts3D_cam[~mask, :]
+            pts3D_cam = pts3D_cam[~mask, :]
             t1 = time.time()
             t_point_filter = (t1 - t0) * 1000
         else:
@@ -248,9 +248,9 @@ class KittiGround(object):
                     
             if self.view_3D['active']:
                 cv2.waitKey(1)
-                colors = np.zeros_like(points3D_rot)
-                colors[mask] = [1, 0, 0]
-                pcd.colors = o3d.utility.Vector3dVector(colors)
+                # colors = np.zeros_like(points3D_rot)
+                # colors[mask] = [1, 0, 0]
+                # pcd.colors = o3d.utility.Vector3dVector(colors)
                 # Plot 3D Shapes in Open3D
                 pcd.points = o3d.utility.Vector3dVector(points3D_rot)
                 all_polys = handle_shapes(vis, planes, obstacles, all_polys)
