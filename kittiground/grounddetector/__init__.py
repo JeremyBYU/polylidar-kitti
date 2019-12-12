@@ -109,7 +109,7 @@ def rotate_points(points, rot):
 def plot_points(image, points, color):
     """ plot projected velodyne points into camera image """
     hsv_image = cv2.cvtColor(image, cv2.COLOR_BGR2HSV)
-    radius = 2
+    radius = 4
     for i in range(points.shape[1]):
         pt_2d = (points[0, i], points[1, i])
         c = (int(color[i]), 255, 255)

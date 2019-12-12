@@ -43,7 +43,7 @@ class KittiGround(object):
         self.postprocess = config['polygon']['postprocess']
         self.record = config['record']
         stacked_str = "_stacked" if self.record['stacked'] and self.view_3D['active'] else ""
-        self.record['fpath'] = str(Path(self.record['directory']) / "{}_{}{}.mp4".format(self.date, self.drive, stacked_str))
+        self.record['fpath'] = str(Path(self.record['directory']) / "{}_{}{}.avi".format(self.date, self.drive, stacked_str))
         self.interactive = config['interactive']
 
         self.load_kitti(self.data_folder, self.date,
@@ -256,7 +256,7 @@ class KittiGround(object):
         if self.record['active']:
             record_frame_width = IMG_WIDTH
             record_frame_height = IMG_HEIGHT * 3 if self.record['stacked'] and self.view_3D['active'] else IMG_HEIGHT
-            out_vid = cv2.VideoWriter(self.record['fpath'], cv2.VideoWriter_fourcc('H','2','6','4'), 10, (record_frame_width,record_frame_height))
+            out_vid = cv2.VideoWriter(self.record['fpath'], cv2.VideoWriter_fourcc('X','2','6','4'), 10, (record_frame_width,record_frame_height))
 
         for frame_idx in self.frame_iter:
             # load image and point cloud
@@ -312,6 +312,7 @@ class KittiGround(object):
                 # capture image of viewer
                 if self.record['active']:
                     image_3D = (np.asarray(vis.capture_screen_float_buffer(True)) * 255).astype(np.uint8)
+                    image_3D = cv2.cvtColor(image_3D, cv2.COLOR_RGB2BGR)
                     stacked_image = np.vstack((img, image_3D))
                     out_vid.write(stacked_image)
     
