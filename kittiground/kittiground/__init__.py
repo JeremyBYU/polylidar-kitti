@@ -199,6 +199,7 @@ class KittiGround(object):
 
     def run(self):
         current_extrinsics = EXTRINSICS
+        time_samples = []
         if self.view_3D['active']:
             vis, pcd, all_polys = init_vis()
 
@@ -221,6 +222,7 @@ class KittiGround(object):
             points3D_rot, poly_rm, planes, obstacles, times = get_polygon(pts3D_cam, self.polylidar_kwargs, self.postprocess)
             # Get and print timing information
             (t_rotation, t_polylidar, t_polyfilter) = times
+            time_samples.append(times)
             logging.info("Frame idx: %d; Execution time(ms) - PC Rotation: %.1f; Polylidar: %.1f; Plane Filtering: %.1f",
                          frame_idx, t_rotation, t_polylidar, t_polyfilter)
             # print()
@@ -274,3 +276,6 @@ class KittiGround(object):
                     current_extrinsics = get_extrinsics(vis)
                     if res != -1:
                         break
+        time_samples = np.array(time_samples)
+        means = np.mean(time_samples, axis=0)
+        logging.info("Mean Execution Time - Point Cloud Rotation: %.1f; Polylidar: %.1f; Polygon Filtering: %.1f", *means)

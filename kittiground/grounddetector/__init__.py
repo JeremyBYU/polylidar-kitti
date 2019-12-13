@@ -139,8 +139,8 @@ def get_points(point_idxs, points):
 
 def create_kd_tree(shell_coords, hole_coords):
     hole_coords.append(shell_coords)
-    all_vertices = np.vstack(tuple(hole_coords))
-    kd_tree = spatial.KDTree(all_vertices)
+    all_vertices = np.vstack(hole_coords)
+    kd_tree = spatial.KDTree(all_vertices, leafsize=100)
     return kd_tree
 
 def add_column(array, z_value):
@@ -233,14 +233,16 @@ def filter_planes_and_holes2(polygons, points, config_pp):
         if area < post_filter['plane_area']['min']:
             continue
         z_value = shell_coords[0][2]
+        if config_pp['simplify']:
+            poly_shape = poly_shape.simplify(tolerance=config_pp['simplify'], preserve_topology=False)
         # Perform 2D geometric operations
         if config_pp['buffer'] or config_pp['positive_buffer']:
             # poly_shape = poly_shape.buffer(-config_pp['buffer'], 1, join_style=JOIN_STYLE.mitre).buffer(config_pp['buffer'], 1, join_style=JOIN_STYLE.mitre)
-            poly_shape = poly_shape.buffer(config_pp['positive_buffer'], 1, join_style=JOIN_STYLE.mitre)
-            poly_shape = poly_shape.buffer(distance=-config_pp['buffer'] * 3)
-            poly_shape = poly_shape.buffer(distance=config_pp['buffer'] * 2)
+            poly_shape = poly_shape.buffer(config_pp['positive_buffer'], join_style=JOIN_STYLE.mitre, resolution=4)
+            poly_shape = poly_shape.buffer(distance=-config_pp['buffer'] * 2, resolution=4)
+            poly_shape = poly_shape.buffer(distance=config_pp['buffer'] * 1, resolution=4)
         if config_pp['simplify']:
-            poly_shape = poly_shape.simplify(tolerance=config_pp['simplify'])
+            poly_shape = poly_shape.simplify(tolerance=config_pp['simplify'], preserve_topology=False)
         
         # Its possible that our polygon has no broken into a multipolygon
         # Check for this situation and handle it
