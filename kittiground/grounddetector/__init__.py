@@ -17,28 +17,6 @@ ORANGE = [249, 115, 6]
 ORANGE_BGR = [6, 115, 249]
 
 
-# def create_3D_coords(poly, height=0):
-#     pts = np.array(poly.exterior.coords)  # NX2
-#     if pts.shape[1] > 2:
-#         return poly
-#     pts = np.column_stack((pts, np.ones((pts.shape[0])) * height))  # NX3
-#     shell = pts.tolist()
-#     holes = []
-#     for hole in poly.interiors:
-#         pts = np.array(hole.coords)
-#         pts = np.column_stack((pts, np.ones((pts.shape[0])) * height))  # NX3
-#         holes.append(pts.tolist())
-#     # print(shell, holes)
-#     return Polygon(shell=shell, holes=holes)
-
-
-# def rotation_matrix(x_theta=90):
-#     theta_rad = math.radians(x_theta)
-#     rotation_matrix = np.array([[1, 0, 0], [0, math.cos(theta_rad), -math.sin(theta_rad)],
-#                                 [0, math.sin(theta_rad), math.cos(theta_rad)]])
-#     return rotation_matrix
-
-
 def axis_angle_rm(axis=np.array([1, 0, 0]), angle=-1.57):
     """
     Create rotation matrix given an axis and angle
@@ -224,8 +202,12 @@ def filter_planes_and_holes2(polygons, points, config_pp):
     # will hold the plane(s) and obstacles found
     planes = []
     obstacles = []
+    i = 0
+    j = 0
     for poly in polygons:
         # shell_coords = [get_point(pi, points) for pi in poly.shell]
+        i += 1
+        t0_ = time.time()
         shell_coords = get_points(poly.shell, points)
         hole_coords = [get_points(hole, points) for hole in poly.holes]
         poly_shape = Polygon(shell=shell_coords, holes=hole_coords)
@@ -234,14 +216,22 @@ def filter_planes_and_holes2(polygons, points, config_pp):
             continue
         z_value = shell_coords[0][2]
         # Perform 2D geometric operations
-        if config_pp['buffer'] or config_pp['positive_buffer']:
-            # poly_shape = poly_shape.buffer(-config_pp['buffer'], 1, join_style=JOIN_STYLE.mitre).buffer(config_pp['buffer'], 1, join_style=JOIN_STYLE.mitre)
-            poly_shape = poly_shape.buffer(config_pp['positive_buffer'], 1, join_style=JOIN_STYLE.mitre)
-            poly_shape = poly_shape.buffer(distance=-config_pp['buffer'] * 3)
-            poly_shape = poly_shape.buffer(distance=config_pp['buffer'] * 2)
+        t0 = time.time()
         if config_pp['simplify']:
             poly_shape = poly_shape.simplify(tolerance=config_pp['simplify'])
+            t1 = time.time()
+        if config_pp['buffer'] or config_pp['positive_buffer']:
+            # poly_shape = poly_shape.buffer(-config_pp['buffer'], 1, join_style=JOIN_STYLE.mitre).buffer(config_pp['buffer'], 1, join_style=JOIN_STYLE.mitre)
+            poly_shape = poly_shape.buffer(config_pp['positive_buffer'], join_style=JOIN_STYLE.mitre, resolution=4)
+            poly_shape = poly_shape.buffer(distance=-config_pp['buffer'] * 5, resolution=4)
+            poly_shape = poly_shape.buffer(distance=config_pp['buffer'] * 4, resolution=4)
+            t2 = time.time()
+        if config_pp['simplify']:
+            poly_shape = poly_shape.simplify(tolerance=config_pp['simplify'])
+        t3 = time.time()
+
         
+        j += 1
         # Its possible that our polygon has no broken into a multipolygon
         # Check for this situation and handle it
         all_poly_shapes = [poly_shape]
@@ -249,16 +239,22 @@ def filter_planes_and_holes2(polygons, points, config_pp):
             all_poly_shapes = list(poly_shape.geoms)
             all_poly_shapes = sorted(all_poly_shapes, key=lambda geom: geom.area, reverse=True)
             all_poly_shapes = all_poly_shapes[:1]
-
+        
         # iteratre through every polygons and check for plane extraction
+        t4 = 0
+        t5 = 0
+        t6 = 0
         for poly_shape in all_poly_shapes:
             area = poly_shape.area
             if area >= post_filter['plane_area']['min']:
                 if config_pp['buffer'] or config_pp['simplify'] or config_pp['positive_buffer']:
                     # convert back to 3D coordinates
                     # create kd tree for vertex lookup after buffering operations
+                    t4 = time.time()
                     kd_tree = create_kd_tree(shell_coords, hole_coords)
+                    t5 = time.time()
                     poly_shape = recover_3d(poly_shape, kd_tree, z_value)
+                    t6 = time.time()
                 pass
                 # Capture the polygon as well as its z height
                 new_plane_polygon = Polygon(shell=poly_shape.exterior)
@@ -273,6 +269,8 @@ def filter_planes_and_holes2(polygons, points, config_pp):
                         if area >= post_filter['hole_area']['min'] and area < post_filter['hole_area']['max']:
                             z_value = hole_lr.coords[0][2]
                             obstacles.append((hole_poly, z_value))
+        print("Create Polygon: {:.1f}; Simplify Polygon: {:.1f}; Buffer Polygon: {:.1f}; Simplify Polygon: {:.1f}; KD Tree: {:.1f}; Recover: {:.1f}".format((t0-t0_) * 1000, (t1-t0) * 1000, (t2-t1) * 1000, (t3-t2) * 1000, (t5-t4) * 1000, (t6-t5)*1000))
+    print(i, j)
     return planes, obstacles
 
 # def filter_planes_and_holes(polygons, points, config_pp):

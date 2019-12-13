@@ -2,7 +2,7 @@
 name: Default settings for polygon extraction of KITTI dataset
 data_folder: "data" # base folder containing KITTI data
 date: "2011_09_26" # date of drive
-drive: "0005" # drive number, #0093 
+drive: "0001" # drive number, #0093 
 cam: 'cam2' # which camera to use, cam0=grey, cam1=grey, cam2=rgb
 interactive: true # wait for human key press to proceed to next frame
 frames:  # which frames
@@ -37,7 +37,7 @@ polygon: # Settings for polygons extraction
   postprocess: # post processing of polygons returned from polylidar for ground/obstacle identification
     filter: # Fitler polygons
       hole_area: # obstacle (holes in polygons) must have these characteristics
-        min: 1   # m^2
+        min: 0.7   # m^2
         max: 40 # m^2
       hole_vertices: # obstacles (holes in polygons) must have these characteristics
         min: 3 # A linear ring has a mininum of 3 vertices
