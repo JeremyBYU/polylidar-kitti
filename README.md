@@ -53,7 +53,7 @@ Polylidar extracts all "flat" surfaces that are connected as polygons. However n
 
 ## Notes
 
-A small amount of outlier filtering is performed. For speed up please install `cppyy` -> `pip install cppyy`.
+A small amount of (naive) pointcloud outlier filtering is performed. For speed up please install `Cython` -> `pip install Cython`.
 
 
 ## TODO 

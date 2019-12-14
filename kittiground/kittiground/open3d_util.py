@@ -52,17 +52,17 @@ def clear_polys(all_polys, vis):
         line_mesh.remove_line(vis)
     return []
 
-def handle_shapes(vis, planes, obstacles, all_polys):
+def handle_shapes(vis, planes, obstacles, all_polys, line_radius=0.15):
     all_polys = clear_polys(all_polys, vis)
     for plane, _ in planes:
         points = np.array(plane.exterior)
-        line_mesh = LineMesh(points, colors=GREEN)
+        line_mesh = LineMesh(points, colors=GREEN, radius=line_radius)
         line_mesh.add_line(vis)
         all_polys.append(line_mesh)
 
     for plane, _ in obstacles:
         points = np.array(plane.exterior)
-        line_mesh = LineMesh(points, colors=ORANGE)
+        line_mesh = LineMesh(points, colors=ORANGE, radius=line_radius)
         line_mesh.add_line(vis)
         all_polys.append(line_mesh)
 

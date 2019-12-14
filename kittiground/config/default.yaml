@@ -2,9 +2,9 @@
 name: Default settings for polygon extraction of KITTI dataset
 data_folder: "data" # base folder containing KITTI data
 date: "2011_09_26" # date of drive
-drive: "0009" # drive number, #0093 
+drive: "0093" # drive number, #0093 
 cam: 'cam2' # which camera to use, cam0=grey, cam1=grey, cam2=rgb
-interactive: true # wait for human key press to proceed to next frame
+interactive: false # wait for human key press to proceed to next frame
 frames:  # which frames
   # - 0   # start index
   # - 10  # end index
@@ -23,13 +23,15 @@ view_image: # Settings for 2D image viewer
   show_polygons: true
 view_3D: # Settings for 3D point cloud viewer
   active: true
+  show_polygons: true
+  line_radius: 0.10
 
 # Polygon Extraction Settings
 polygon: # Settings for polygons extraction
   polylidar: # Parameters we send to polylidar. Determine plane and polygon extracton from point clouds.
     lmax: 1.25 # maximum distance (m) between points in plane for spatial connection
-    zThresh: 0.03 # triangles with z-height (m) less than this have normal filtering skipped. For sensor noise.
-    normThresh: 0.98 # triangles whose normal is greater than X degrees are filtered acos(tri_norm * [0,0,1])
+    zThresh: 0.04 # triangles with z-height (m) less than this have normal filtering skipped. For sensor noise.
+    normThresh: 0.985 # triangles whose normal is greater than X degrees are filtered acos(tri_norm * [0,0,1])
     normThreshMin: 0.96 # mininum level of planarity needed
     minTriangles : 250 # mininum number of triangles in a plane
     minHoleVertices : 6 # mininum number of vertices in a hole to return
@@ -46,7 +48,7 @@ polygon: # Settings for polygons extraction
       num_planes_allowed: 1 # TODO Only allow this many largest planes through
     # These parameters correspond to Shapely polygon geometry operations
     positive_buffer: 0.01 # m, Positvely expand polygon.  Fills in small holes
-    buffer: 0.5 # m, Negative buffer to polygon. Expands holes and constricuts outer hull of polygon
+    buffer: 0.4 # m, Negative buffer to polygon. Expands holes and constricuts outer hull of polygon
     simplify: 0.2  # m, simplify edges of polygon
 
 # Recording Settings

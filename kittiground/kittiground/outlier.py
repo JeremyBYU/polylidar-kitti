@@ -2,25 +2,31 @@
 import numpy as np
 import logging
 import time
+import sys
+from scipy.signal import medfilt
 try:
-    import cppyy
-    cppyy.cppdef("""
-    void pattern(uint8_t *src, uint8_t *dest, size_t src_size)  {
-        for(size_t i = 2; i < src_size - 3; i++)
-        {
-            dest[i+1] = (src[i-2] > 0) && (src[i-1] > 0) && 
-            (src[i] == 0) && (src[i+1] == 0) && 
-            (src[i+2] > 0) && (src[i+3] > 0);
-        }
+    # import cppyy
+    # cppyy.cppdef("""
+    # void pattern(uint8_t *src, uint8_t *dest, size_t src_size)  {
+    #     for(size_t i = 2; i < src_size - 3; i++)
+    #     {
+    #         dest[i+1] = (src[i-2] > 0) && (src[i-1] > 0) && 
+    #         (src[i] == 0) && (src[i+1] == 0) && 
+    #         (src[i+2] > 0) && (src[i+3] > 0);
+    #     }
 
-    }   
-    """)
+    # }   
+    # """)
 
-    from cppyy.gbl import pattern as cpp_pattern
+    # from cppyy.gbl import pattern as cpp_pattern
+    import pyximport
+    pyximport.install(setup_args={'include_dirs': np.get_include()})
+    from kittiground.kittiground.outlierfast import c_pattern
+
 
 except Exception:
     logging.warn("Using slow python implementation")
-    cpp_pattern = None
+    c_pattern = None
 
 def moving_average(a, n=3, pad_start=None):
     ret = np.cumsum(a, dtype=float)
@@ -44,11 +50,9 @@ def outlier_removal(pc, stable_dist=0.1):
     diff = pc - pc_shift
     diff_norm = np.linalg.norm(diff, axis=1)
 
-    # TODO need outlier removal for average
-    stable_dist_array = np.clip(diff_norm, 0.01, diff_norm)
-    stable_dist_array = moving_average(
-        stable_dist_array, n=10, pad_start=stable_dist)
-    stable_dist_array = np.clip(stable_dist_array, 0.02, stable_dist) * 1.5
+    stable_dist_array = diff_norm
+    stable_dist_array = medfilt(stable_dist_array, kernel_size=9)
+    stable_dist_array = np.clip(stable_dist_array, 0.01, stable_dist) * 2
 
     # This is the pattern we are looking for
     want_pattern = np.array(
@@ -58,10 +62,10 @@ def outlier_removal(pc, stable_dist=0.1):
 
     # this will hold the mask of outlier points
     mask = np.zeros_like(diff_norm, dtype=np.bool)
-    mask = match_pattern(pc_pattern, mask, want_pattern, use_cpp=True)
+    mask = match_pattern(pc_pattern, mask, want_pattern, use_compiled=True)
 
     t2 = time.time()
-    # print("Pattern Creating: {:.1f}; Pattern Matching: {:.1f}".format((t1-t0) * 1000, (t2-t1) * 1000))
+    print("Pattern Creating: {:.1f}; Pattern Matching: {:.1f}".format((t1-t0) * 1000, (t2-t1) * 1000))
 
     return mask
 
@@ -71,15 +75,16 @@ def python_pattern(pc_pattern, mask, want_pattern):
         if np.array_equal(want_pattern, new_pattern):
             mask[i+3] = True
 
-def match_pattern(pc_pattern, mask, want_pattern, use_cpp=True):
-    if use_cpp and cpp_pattern:
+def match_pattern(pc_pattern, mask, want_pattern, use_compiled=True):
+    if use_compiled and c_pattern:
         # print(pc_pattern, pc_pattern.dtype)
         # print(mask, mask.dtype)
         pc_pattern = pc_pattern.astype("uint8")
         mask = mask.astype("uint8")
         # print(pc_pattern, pc_pattern.dtype)
         # print(mask, mask.dtype)
-        cpp_pattern(pc_pattern, mask, pc_pattern.shape[0])
+        # cpp_pattern(pc_pattern, mask, pc_pattern.shape[0])
+        c_pattern(pc_pattern, mask)
         # print(np.count_nonzero(mask))
         return np.ma.make_mask(mask)
     else:

@@ -254,7 +254,8 @@ class KittiGround(object):
                 # pcd.colors = o3d.utility.Vector3dVector(colors)
                 # Plot 3D Shapes in Open3D
                 pcd.points = o3d.utility.Vector3dVector(points3D_rot)
-                all_polys = handle_shapes(vis, planes, obstacles, all_polys)
+                if self.view_3D['show_polygons']:
+                    all_polys = handle_shapes(vis, planes, obstacles, all_polys, line_radius=self.view_3D['line_radius'])
                 vis.update_geometry()
                 vis.update_renderer()
 

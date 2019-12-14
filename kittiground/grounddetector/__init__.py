@@ -17,26 +17,6 @@ ORANGE = [249, 115, 6]
 ORANGE_BGR = [6, 115, 249]
 
 
-# def create_3D_coords(poly, height=0):
-#     pts = np.array(poly.exterior.coords)  # NX2
-#     if pts.shape[1] > 2:
-#         return poly
-#     pts = np.column_stack((pts, np.ones((pts.shape[0])) * height))  # NX3
-#     shell = pts.tolist()
-#     holes = []
-#     for hole in poly.interiors:
-#         pts = np.array(hole.coords)
-#         pts = np.column_stack((pts, np.ones((pts.shape[0])) * height))  # NX3
-#         holes.append(pts.tolist())
-#     # print(shell, holes)
-#     return Polygon(shell=shell, holes=holes)
-
-
-# def rotation_matrix(x_theta=90):
-#     theta_rad = math.radians(x_theta)
-#     rotation_matrix = np.array([[1, 0, 0], [0, math.cos(theta_rad), -math.sin(theta_rad)],
-#                                 [0, math.sin(theta_rad), math.cos(theta_rad)]])
-#     return rotation_matrix
 
 
 def axis_angle_rm(axis=np.array([1, 0, 0]), angle=-1.57):
@@ -276,57 +256,6 @@ def filter_planes_and_holes2(polygons, points, config_pp):
                             z_value = hole_lr.coords[0][2]
                             obstacles.append((hole_poly, z_value))
     return planes, obstacles
-
-# def filter_planes_and_holes(polygons, points, config_pp):
-#     """Extracts the plane and obstacles returned from polylidar
-#     Will filter polygons according to: number of vertices and size
-#     Will also buffer (dilate) and simplify polygons
-
-#     Arguments:
-#         polygons {list[Polygons]} -- A list of polygons returned from polylidar
-#         points {ndarray} -- MX3 array
-#         config_pp {dict} -- Configuration for post processing filtering
-
-#     Returns:
-#         tuple -- A list of plane shapely polygons and a list of obstacle polygons
-#     """
-#     # filtering configuration
-#     post_filter = config_pp['filter']
-
-#     # will hold the plane(s) and obstacles found
-#     planes = []
-#     obstacles = []
-#     for poly in polygons:
-#         # shell_coords = [get_point(pi, points) for pi in poly.shell]
-#         shell_coords = get_points(poly.shell, points)
-#         outline = Polygon(shell=shell_coords)
-#         if config_pp['buffer']:
-#             outline = outline.buffer(distance=config_pp['buffer'])
-#         if config_pp['simplify']:
-#             outline = outline.simplify(tolerance=config_pp['simplify'])
-#         area = outline.area
-#         if area >= post_filter['plane_area']['min']:
-#             # Capture the polygon as well as its z height
-#             z_value = shell_coords[0][2]
-#             planes.append((create_3D_coords(outline, z_value), z_value))
-
-#             for hole_poly in poly.holes:
-#                 # Filter by number of obstacle vertices, removes noisy holes
-#                 if len(hole_poly) > post_filter['hole_vertices']['min']:
-#                     shell_coords = get_points(hole_poly, points)
-#                     outline = Polygon(shell=shell_coords)
-#                     area = outline.area
-#                     # filter by area
-#                     if area >= post_filter['hole_area']['min'] and area < post_filter['hole_area']['max']:
-#                         if config_pp['buffer']:
-#                             outline = outline.buffer(distance=config_pp['buffer'])
-#                         if config_pp['simplify']:
-#                             outline = outline.simplify(tolerance=config_pp['simplify'])
-#                         z_value = shell_coords[0][2]
-#                         obstacles.append(
-#                             (create_3D_coords(outline, z_value), z_value))
-#     return planes, obstacles
-
 
 def project_points(pts3D_cam_rect, proj_matrix, img_m, img_n):
     pts2D_cam_rect = proj_matrix @ pts3D_cam_rect
