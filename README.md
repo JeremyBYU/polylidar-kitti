@@ -56,3 +56,7 @@ Polylidar extracts all "flat" surfaces that are connected as polygons. However n
 A small amount of outlier filtering is performed. For speed up please install `cppyy` -> `pip install cppyy`.
 
 
+## TODO 
+
+Rotate point cloud using IMU. Does it help or make it worse?
+
