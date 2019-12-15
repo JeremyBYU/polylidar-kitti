@@ -219,8 +219,8 @@ def filter_planes_and_holes2(polygons, points, config_pp):
         if config_pp['buffer'] or config_pp['positive_buffer']:
             # poly_shape = poly_shape.buffer(-config_pp['buffer'], 1, join_style=JOIN_STYLE.mitre).buffer(config_pp['buffer'], 1, join_style=JOIN_STYLE.mitre)
             poly_shape = poly_shape.buffer(config_pp['positive_buffer'], join_style=JOIN_STYLE.mitre, resolution=4)
-            poly_shape = poly_shape.buffer(distance=-config_pp['buffer'] * 2, resolution=4)
-            poly_shape = poly_shape.buffer(distance=config_pp['buffer'] * 1, resolution=4)
+            poly_shape = poly_shape.buffer(distance=-config_pp['buffer'] * 3, resolution=4)
+            poly_shape = poly_shape.buffer(distance=config_pp['buffer'] * 2, resolution=4)
         if config_pp['simplify']:
             poly_shape = poly_shape.simplify(tolerance=config_pp['simplify'], preserve_topology=False)
         
