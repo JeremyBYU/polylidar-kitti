@@ -2,13 +2,34 @@
 name: Default settings for polygon extraction of KITTI dataset
 data_folder: "data" # base folder containing KITTI data
 date: "2011_09_26" # date of drive
-drive: "0113" # drive number, #0093 
+drive:
+  - "0001"
+  - "0002"
+  - "0005"
+  - "0009"
+  - "0011"
+  - "0013"
+  - "0014"
+  - "0017"
+  - "0018"
+  - "0048"
+  - "0051"
+  - "0056"
+  - "0057"
+  - "0059"
+  - "0060"
+  - "0084"
+  - "0091"
+  - "0093"
+  - "0095"
+  - "0096"
+  - "0104"
+  - "0106"
+  - "0113"
+  - "0117"
 cam: 'cam2' # which camera to use, cam0=grey, cam1=grey, cam2=rgb
 interactive: false # wait for human key press to proceed to next frame
 frames:  # which frames
-  # - 0   # start index
-  # - 10  # end index
-  # - 1   # index jump
 
 # Point Cloud Settings
 pointcloud: 

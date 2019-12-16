@@ -1,16 +1,44 @@
+from kittiground.kittiground import KittiGround
+from kittiground import DEFAULT_CONFIG_FILE
 import logging
+from pathlib import Path
+
 import click
 import yaml
+import pandas as pd
+import seaborn as sns
+import matplotlib.pyplot as plt
 
 logging.basicConfig(level=logging.INFO)
 
-from kittiground import DEFAULT_CONFIG_FILE
-from kittiground.kittiground import KittiGround
+
+sns.set()
 
 
 @click.group()
 def cli():
     """Polyliadr with KITTI Dataset"""
+
+
+def create_time_df(time_samples, drive):
+    df = pd.DataFrame(data=time_samples, columns=[
+                      't_outlier', 't_rotation', 't_polylidar', 't_polyfilter'])
+    df['frame_idx'] = df.index
+    df['drive'] = drive
+    df = df[['drive', 'frame_idx', 't_outlier',
+             't_rotation', 't_polylidar', 't_polyfilter']]
+    return df
+
+
+@cli.command()
+@click.argument('input', type=click.File('r'))
+def plot(input):
+    df = pd.read_csv(input)
+    df_melt = pd.melt(df, id_vars=['drive', 'frame_idx'], var_name=['Group'], value_vars=[
+                      't_outlier', 't_rotation', 't_polylidar', 't_polyfilter'], value_name='Execution Time')
+    ax = sns.boxplot(x="Group", y="Execution Time", data=df_melt)
+    plt.show()
+
 
 @cli.command()
 @click.argument('input', type=click.File('r'), default=str(DEFAULT_CONFIG_FILE))
@@ -23,6 +51,22 @@ def run(input):
         config = yaml.safe_load(input)
     except yaml.YAMLError as exc:
         logging.exception("Error parsing yaml")
-    kg = KittiGround(config)
-    time_samples = kg.run()
+    if isinstance(config['drive'], list):
+        all_drives = config['drive'].copy()
+    else:
+        all_drives = [config['drive']]
 
+    all_dfs = []
+    for drive in all_drives:
+        config['drive'] = drive
+        kg = KittiGround(config)
+        time_samples = kg.run()
+        logging.info("Finished Drive: %r", drive)
+        df = create_time_df(time_samples, drive)
+        all_dfs.append(df)
+
+    merged_df = pd.concat(all_dfs)
+    if config['timings']['active']:
+        fpath = Path(config['timings']['directory'])
+        fpath = fpath / "combined.csv"
+        merged_df.to_csv(str(fpath), index=False)
