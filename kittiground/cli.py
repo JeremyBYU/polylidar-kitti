@@ -34,9 +34,14 @@ def create_time_df(time_samples, drive):
 @click.argument('input', type=click.File('r'))
 def plot(input):
     df = pd.read_csv(input)
+    df = df[['drive', 'frame_idx', 't_outlier', 't_polylidar', 't_polyfilter']]
     df_melt = pd.melt(df, id_vars=['drive', 'frame_idx'], var_name=['Group'], value_vars=[
-                      't_outlier', 't_rotation', 't_polylidar', 't_polyfilter'], value_name='Execution Time')
-    ax = sns.boxplot(x="Group", y="Execution Time", data=df_melt)
+                      't_outlier', 't_polylidar', 't_polyfilter'], value_name='Execution Time (ms)')
+    facet_kwargs = dict(gridspec_kws=dict(hspace=.05))
+    g = sns.catplot(x="Group", y="Execution Time (ms)", col='drive', data=df_melt, col_wrap=4, kind='boxen')
+    g.set(ylim=(0, 20))
+    # ax = sns.boxplot(x="Group", y="Execution Time", data=df_melt)
+    plt.subplots_adjust(hspace=0.2, wspace=0.05)
     plt.show()
 
 

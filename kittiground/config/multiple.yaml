@@ -54,7 +54,7 @@ polygon: # Settings for polygons extraction
     zThresh: 0.04 # triangles with z-height (m) less than this have normal filtering skipped. For sensor noise.
     normThresh: 0.985 # triangles whose normal is greater than X degrees are filtered acos(tri_norm * [0,0,1])
     normThreshMin: 0.90 # mininum level of planarity needed
-    minTriangles : 250 # mininum number of triangles in a plane
+    minTriangles : 3500 # mininum number of triangles in a plane
     minHoleVertices : 6 # mininum number of vertices in a hole to return
     alpha: 0.0 # must be set to 0.0 if using lmax
   postprocess: # post processing of polygons returned from polylidar for ground/obstacle identification
@@ -74,7 +74,7 @@ polygon: # Settings for polygons extraction
 
 # Recording Settings
 record:
-  active: false # do we want to actively record a video
+  active: true # do we want to actively record a video
   directory: "data" # what directory to save the mp4
   stacked: true # whether to stack 2D Viewer and 3D Viewer images
 

@@ -182,20 +182,18 @@ def filter_planes_and_holes2(polygons, points, config_pp):
             # poly_shape = poly_shape.buffer(-config_pp['buffer'], 1, join_style=JOIN_STYLE.mitre).buffer(config_pp['buffer'], 1, join_style=JOIN_STYLE.mitre)
             poly_shape = poly_shape.buffer(config_pp['positive_buffer'], join_style=JOIN_STYLE.mitre, resolution=4)
             poly_shape = poly_shape.buffer(distance=-config_pp['buffer'] * 3, resolution=4)
+            if poly_shape.geom_type == 'MultiPolygon':
+                all_poly_shapes = list(poly_shape.geoms)
+                poly_shape = sorted(all_poly_shapes, key=lambda geom: geom.area, reverse=True)[0]
             poly_shape = poly_shape.buffer(distance=config_pp['buffer'] * 2, resolution=4)
         if config_pp['simplify']:
-            poly_shape = poly_shape.simplify(tolerance=config_pp['simplify'], preserve_topology=True)
+            poly_shape = poly_shape.simplify(tolerance=config_pp['simplify'], preserve_topology=False)
         
         # Its possible that our polygon has no broken into a multipolygon
         # Check for this situation and handle it
         all_poly_shapes = [poly_shape]
-        if poly_shape.geom_type == 'MultiPolygon':
-            all_poly_shapes = list(poly_shape.geoms)
-            all_poly_shapes = sorted(all_poly_shapes, key=lambda geom: geom.area, reverse=True)
             
             
-
-
         # iteratre through every polygons and check for plane extraction
         for poly_shape in all_poly_shapes:
             area = poly_shape.area
