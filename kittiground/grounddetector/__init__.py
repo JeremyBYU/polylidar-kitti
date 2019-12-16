@@ -37,22 +37,6 @@ def axis_angle_rm(axis=np.array([1, 0, 0]), angle=-1.57):
     return rotation_matrix
 
 
-# def filter_zero(points_np):
-#     """
-#     Filter out all zero vectors (3D)
-#     """
-#     # TODO replace with cython or numba
-#     A = points_np[:, 0]
-#     B = points_np[:, 1]
-#     C = points_np[:, 2]
-#     t0 = time.time()
-#     mask = A == 0.0
-#     mask = mask & (B == 0.0)
-#     mask = mask & (C == 0.0)
-#     points_np = points_np[~mask]
-#     # print(f"Filtering Took {(time.time() - t0) * 1000:.1f} ms")
-#     return points_np
-
 
 def rotate_points(points, rot):
     """
@@ -63,27 +47,6 @@ def rotate_points(points, rot):
     points_rot = points_rot.transpose()
     # print(f"Rotation Took {(time.time() - t0) * 1000:.1f} ms")
     return points_rot
-
-
-# def get_normal(points):
-#     points = points - np.mean(points, axis=0)
-#     u, s, vh = np.linalg.svd(points, compute_uv=True)
-#     # GET THE LAST ROW!!!!!!!NOT LAST COLUMN
-#     return vh[-1, :]
-
-
-# def calculate_plane_normal(patches):
-#     """
-#     Get normal of all the patches
-#     """
-#     normals = []
-#     for patch in patches:
-#         normal = get_normal(patch)
-#         normals.append(normal)
-#     # Taken naive mean of normals
-#     # TODO outlier removal
-#     normals = np.mean(np.array(normals), axis=0)
-#     return normals
 
 
 def plot_points(image, points, color):
@@ -110,9 +73,6 @@ def align_vector_to_axis(points, vector=np.array([0, 0, 1]), axis=[0, 0, -1], ):
     points_rot = rotate_points(points, rm)
     return points_rot, rm
 
-
-# def get_point(pi, points):
-#     return [points[pi, 0], points[pi, 1], points[pi, 2]]
 
 def get_points(point_idxs, points):
     return points[point_idxs, :]
@@ -210,11 +170,13 @@ def filter_planes_and_holes2(polygons, points, config_pp):
         hole_coords = [get_points(hole, points) for hole in poly.holes]
         poly_shape = Polygon(shell=shell_coords, holes=hole_coords)
         area = poly_shape.area
+        # logging.info("Got a plane!")
         if area < post_filter['plane_area']['min']:
+            # logging.info("Skipping Plane")
             continue
         z_value = shell_coords[0][2]
         if config_pp['simplify']:
-            poly_shape = poly_shape.simplify(tolerance=config_pp['simplify'], preserve_topology=False)
+            poly_shape = poly_shape.simplify(tolerance=config_pp['simplify'], preserve_topology=True)
         # Perform 2D geometric operations
         if config_pp['buffer'] or config_pp['positive_buffer']:
             # poly_shape = poly_shape.buffer(-config_pp['buffer'], 1, join_style=JOIN_STYLE.mitre).buffer(config_pp['buffer'], 1, join_style=JOIN_STYLE.mitre)
@@ -222,7 +184,7 @@ def filter_planes_and_holes2(polygons, points, config_pp):
             poly_shape = poly_shape.buffer(distance=-config_pp['buffer'] * 3, resolution=4)
             poly_shape = poly_shape.buffer(distance=config_pp['buffer'] * 2, resolution=4)
         if config_pp['simplify']:
-            poly_shape = poly_shape.simplify(tolerance=config_pp['simplify'], preserve_topology=False)
+            poly_shape = poly_shape.simplify(tolerance=config_pp['simplify'], preserve_topology=True)
         
         # Its possible that our polygon has no broken into a multipolygon
         # Check for this situation and handle it
@@ -230,18 +192,21 @@ def filter_planes_and_holes2(polygons, points, config_pp):
         if poly_shape.geom_type == 'MultiPolygon':
             all_poly_shapes = list(poly_shape.geoms)
             all_poly_shapes = sorted(all_poly_shapes, key=lambda geom: geom.area, reverse=True)
-            all_poly_shapes = all_poly_shapes[:1]
+            
+            
+
 
         # iteratre through every polygons and check for plane extraction
         for poly_shape in all_poly_shapes:
             area = poly_shape.area
+            # logging.info("Plane is big enough still")
             if area >= post_filter['plane_area']['min']:
+                # logging.info("Plane is big enough still")
                 if config_pp['buffer'] or config_pp['simplify'] or config_pp['positive_buffer']:
                     # convert back to 3D coordinates
                     # create kd tree for vertex lookup after buffering operations
                     kd_tree = create_kd_tree(shell_coords, hole_coords)
                     poly_shape = recover_3d(poly_shape, kd_tree, z_value)
-                pass
                 # Capture the polygon as well as its z height
                 new_plane_polygon = Polygon(shell=poly_shape.exterior)
                 planes.append((new_plane_polygon, z_value))
