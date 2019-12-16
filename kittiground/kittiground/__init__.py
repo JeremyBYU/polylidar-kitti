@@ -185,13 +185,16 @@ class KittiGround(object):
 
         color = self.normalize_data(color)
         if self.pointcloud['outlier_removal']:
-            # points3D_rot = points3D_rot[:400, :]
+            # pts3D_cam = pts3D_cam[1590:1600, :]
+            t0 = time.time()
             mask = outlier_removal(pts3D_cam)
             pts3D_cam = pts3D_cam[~mask, :]
+            t1 = time.time()
+            t_outlierpc = (t1 - t0) * 1000
         else:
             mask = np.zeros(color.shape, dtype=np.bool)
 
-        return imgN, pts2D_cam, color, pts3D_cam, mask
+        return imgN, pts2D_cam, color, pts3D_cam, mask, t_outlierpc
 
     @staticmethod
     def downsamle_pc(pc, ds=2):
@@ -212,7 +215,7 @@ class KittiGround(object):
         for frame_idx in self.frame_iter:
             # load image and point cloud
             try:
-                img, pts2D_cam, color, pts3D_cam, mask = self.load_frame(
+                img, pts2D_cam, color, pts3D_cam, mask, t_outlierpc = self.load_frame(
                     frame_idx)
             except Exception:
                 logging.exception(
@@ -222,9 +225,9 @@ class KittiGround(object):
             points3D_rot, poly_rm, planes, obstacles, times = get_polygon(pts3D_cam, self.polylidar_kwargs, self.postprocess)
             # Get and print timing information
             (t_rotation, t_polylidar, t_polyfilter) = times
-            time_samples.append(times)
-            logging.info("Frame idx: %d; Execution time(ms) - PC Rotation: %.1f; Polylidar: %.1f; Plane Filtering: %.1f",
-                         frame_idx, t_rotation, t_polylidar, t_polyfilter)
+            time_samples.append((t_outlierpc, ) +times)
+            logging.info("Frame idx: %d; Execution time(ms) - PC Filter: %.1f; PC Rotation: %.1f; Polylidar: %.1f; Plane Filtering: %.1f",
+                         frame_idx, t_outlierpc, t_rotation, t_polylidar, t_polyfilter)
             # print()
 
             # Write over 2D Image
@@ -279,4 +282,5 @@ class KittiGround(object):
                         break
         time_samples = np.array(time_samples)
         means = np.mean(time_samples, axis=0)
-        logging.info("Mean Execution Time - Point Cloud Rotation: %.1f; Polylidar: %.1f; Polygon Filtering: %.1f", *means)
+        logging.info("Mean Execution Time - Point Cloud Filter: %.1f; Point Cloud Rotation: %.1f; Polylidar: %.1f; Polygon Filtering: %.1f", *means)
+        return time_samples

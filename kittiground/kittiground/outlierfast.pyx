@@ -11,7 +11,7 @@ ctypedef np.uint8_t DTYPE_t
 
 @cython.boundscheck(False) # turn off bounds-checking for entire function
 @cython.wraparound(False)  # turn off negative index wrapping for entire function
-def c_pattern(np.ndarray[DTYPE_t, ndim=1] src, np.ndarray[DTYPE_t, ndim=1] dest):
+def c_pattern_6(np.ndarray[DTYPE_t, ndim=1] src, np.ndarray[DTYPE_t, ndim=1] dest):
     assert src.dtype == DTYPE and dest.dtype == DTYPE
     assert src.shape[0] == dest.shape[0]
 
@@ -24,3 +24,19 @@ def c_pattern(np.ndarray[DTYPE_t, ndim=1] src, np.ndarray[DTYPE_t, ndim=1] dest)
         dest[i+1] = (src[i-2] > 0) and (src[i-1] > 0) and \
         (src[i] == 0) and (src[i+1] == 0) and \
         (src[i+2] > 0) and (src[i+3] > 0)
+
+
+@cython.boundscheck(False) # turn off bounds-checking for entire function
+@cython.wraparound(False)  # turn off negative index wrapping for entire function
+def c_pattern_2(np.ndarray[DTYPE_t, ndim=1] src, np.ndarray[DTYPE_t, ndim=1] dest):
+    assert src.dtype == DTYPE and dest.dtype == DTYPE
+    assert src.shape[0] == dest.shape[0]
+
+    cdef int src_size = src.shape[0]
+    cdef int i
+
+    cdef DTYPE_t value
+    # Looking for pattern True, True, False, False, True, True
+    for i in range(0, src_size - 2):
+        if (src[i] == 0) and (src[i + 1] == 0):
+            dest[i+1] = 255

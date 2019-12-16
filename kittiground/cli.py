@@ -24,5 +24,5 @@ def run(input):
     except yaml.YAMLError as exc:
         logging.exception("Error parsing yaml")
     kg = KittiGround(config)
-    kg.run()
+    time_samples = kg.run()
 
