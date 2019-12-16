@@ -51,14 +51,14 @@ def rotate_points(points, rot):
 
 def plot_points(image, points, color):
     """ plot projected velodyne points into camera image """
-    hsv_image = cv2.cvtColor(image, cv2.COLOR_BGR2HSV)
-    radius = 4
+    hsv_image = cv2.cvtColor(image, cv2.COLOR_BGR2RGB)
+    radius = 1
     for i in range(points.shape[1]):
         pt_2d = (points[0, i], points[1, i])
-        c = (int(color[i]), 255, 255)
+        c = (color[i,:] * 255).astype(dtype=np.uint8).tolist()
         cv2.circle(hsv_image, pt_2d, radius, c, -1)
 
-    return cv2.cvtColor(hsv_image, cv2.COLOR_HSV2BGR)
+    return cv2.cvtColor(hsv_image, cv2.COLOR_RGB2BGR)
 
 def align_vector_to_axis(points, vector=np.array([0, 0, 1]), axis=[0, 0, -1], ):
     """
@@ -256,7 +256,7 @@ def get_pix_coordinates(pts, proj_mat, w, h):
     return pixels
 
 
-def plot_opencv_polys(polygons, color_image, proj_mat, rot_mat, w, h, color=(0, 255, 0), thickness=2):
+def plot_opencv_polys(polygons, color_image, proj_mat, rot_mat, w, h, color=(0, 255, 0), thickness=3):
     for i, (poly, height) in enumerate(polygons):
         # Get 2D polygons and assign z component the height value of extracted plane
         pts = np.array(poly.exterior.coords)  # NX2
@@ -273,7 +273,7 @@ def plot_opencv_polys(polygons, color_image, proj_mat, rot_mat, w, h, color=(0, 
     return color_image
 
 
-def plot_planes_and_obstacles(planes, obstacles, proj_mat, rot_mat, color_image, width, height, thickness=2):
+def plot_planes_and_obstacles(planes, obstacles, proj_mat, rot_mat, color_image, width, height, thickness=3):
     """Plots the planes and obstacles (3D polygons) into the color image
 
     Arguments:

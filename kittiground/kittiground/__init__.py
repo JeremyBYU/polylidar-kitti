@@ -7,6 +7,8 @@ from pykitti.utils import rotz, OxtsData, transform_from_rot_trans
 import cv2
 import numpy as np
 import open3d as o3d
+from matplotlib.colors import Normalize
+import matplotlib.pyplot as plt
 
 from kittiground import EXTRINSICS, IMG_WIDTH, IMG_HEIGHT
 from kittiground.kittiground.outlier import outlier_removal
@@ -17,6 +19,9 @@ np.set_printoptions(suppress=True,
                     formatter={'float_kind': '{:.8f}'.format})
 
 
+def map_colors(inp, colormap, vmin=None, vmax=None):
+    norm = Normalize(vmin, vmax)
+    return colormap(norm(inp))
 
 class KittiGround(object):
     def __init__(self, config):
@@ -38,6 +43,7 @@ class KittiGround(object):
 
         self.load_kitti(self.data_folder, self.date,
                         self.drive, frames=self.frames)
+        self.cm = plt.get_cmap(self.pointcloud['color_map'])
 
         self.frame_iter = range(len(self.data_kitti.velo_files))
 
@@ -134,12 +140,6 @@ class KittiGround(object):
         return pts3D_cam_rect_filt, intensity_filt
 
 
-    @staticmethod
-    def normalize_data(data, scale=255, data_min=None, data_max=None):
-        """ Normalize data """
-        data_min = data_min if data_min else np.min(data)
-        data_max = data_max if data_max else np.max(data)
-        return ((data - data_min) / (data_max - data_min) * scale).astype(np.uint8)
 
     def load_frame(self, frame_idx: int):
         """Load frame from kitti
@@ -180,17 +180,23 @@ class KittiGround(object):
         else:
             z_height = -pts3D_cam[:, 1]
             color = z_height
-            data_min = -1.5
-            data_max = 8
+            data_min = -2.3
+            data_max = 2
 
-        color = self.normalize_data(color)
+        # print(np.min(pts3D_cam, axis=0), np.max(pts3D_cam, axis=0))
+        # print(data_min, data_max)
+
+        color = self.get_colors(color, vmin=data_min, vmax=data_max)
         if self.pointcloud['outlier_removal']:
             # pts3D_cam = pts3D_cam[1590:1600, :]
             t0 = time.time()
             mask = outlier_removal(pts3D_cam)
             pts3D_cam = pts3D_cam[~mask, :]
+            pts2D_cam = pts2D_cam[:, ~mask]
+            color = color[~mask, :]
             t1 = time.time()
             t_outlierpc = (t1 - t0) * 1000
+            # print(np.min(pts3D_cam, axis=0), np.max(pts3D_cam, axis=0))
         else:
             mask = np.zeros(color.shape, dtype=np.bool)
 
@@ -199,6 +205,10 @@ class KittiGround(object):
     @staticmethod
     def downsamle_pc(pc, ds=2):
         return pc[::ds, :]
+
+    def get_colors(self, colors, vmin=None, vmax=None):
+        mycolors = map_colors(colors, self.cm, vmin=vmin, vmax=vmax)
+        return mycolors[:,:3]
 
     def run(self):
         current_extrinsics = EXTRINSICS
@@ -254,7 +264,7 @@ class KittiGround(object):
                 cv2.waitKey(1)
                 # colors = np.zeros_like(points3D_rot)
                 # colors[mask] = [1, 0, 0]
-                # pcd.colors = o3d.utility.Vector3dVector(colors)
+                pcd.colors = o3d.utility.Vector3dVector(color)
                 # Plot 3D Shapes in Open3D
                 pcd.points = o3d.utility.Vector3dVector(points3D_rot)
                 if self.view_3D['show_polygons']:

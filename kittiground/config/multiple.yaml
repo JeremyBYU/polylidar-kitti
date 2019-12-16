@@ -35,7 +35,8 @@ frames:  # which frames
 pointcloud: 
   downsample: 2 # how much to downsample, 1=No downsample, 2 = Every other, N = Every N points
   outlier_removal: true # use simple outlier removal on point cloud
-  color: "distance" # colorize point cloud by: intensity, height, distance
+  color: "height" # colorize point cloud by: intensity, height, distance
+  color_map: 'plasma'
 
 # 2D/3D View Settings
 view_image: # Settings for 2D image viewer

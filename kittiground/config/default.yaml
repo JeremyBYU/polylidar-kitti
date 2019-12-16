@@ -2,7 +2,7 @@
 name: Default settings for polygon extraction of KITTI dataset
 data_folder: "data" # base folder containing KITTI data
 date: "2011_09_26" # date of drive
-drive: "0013" # drive number, #0093 
+drive: "0001" # drive number, #0093 
 cam: 'cam2' # which camera to use, cam0=grey, cam1=grey, cam2=rgb
 interactive: true # wait for human key press to proceed to next frame
 frames:  # which frames
@@ -14,15 +14,16 @@ frames:  # which frames
 pointcloud: 
   downsample: 2 # how much to downsample, 1=No downsample, 2 = Every other, N = Every N points
   outlier_removal: true # use simple outlier removal on point cloud
-  color: "distance" # colorize point cloud by: intensity, height, distance
+  color: "height" # colorize point cloud by: intensity, height, distance
+  color_map: 'plasma'
 
 # 2D/3D View Settings
 view_image: # Settings for 2D image viewer
   active: true
-  show_pointcloud: false
+  show_pointcloud: true
   show_polygons: true
 view_3D: # Settings for 3D point cloud viewer
-  active: false
+  active: true
   show_polygons: true
   line_radius: 0.10
 
