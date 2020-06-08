@@ -9,7 +9,6 @@ import cv2
 from shapely.geometry import Polygon, JOIN_STYLE
 
 from polylidar import MatrixDouble, Delaunator
-from kittiground.grounddetector.estimate_ground import extract_all_dominant_plane_normals
 
 M2TOCM2 = 10000
 CMTOM = 0.01
@@ -134,18 +133,12 @@ def get_polygon(points3D_cam, polylidar, postprocess_config):
     t1 = time.perf_counter()
     points_mat = MatrixDouble(points3D_rot_)
     # We need to perform these steps manually if we are going to pass a mesh instead of just the points
+    # only necessary because I want the timings of just the frontend
     mesh = Delaunator(points_mat)
     mesh.triangulate()
     mesh.compute_triangle_normals()
     t1_2 = time.perf_counter()
-    # import ipdb; ipdb.set_trace()
-    # avg_peaks, pcd_all_peaks, arrow_avg_peaks, colored_icosahedron, timings = extract_all_dominant_plane_normals(mesh, with_o3d=False)
-    # peak = avg_peaks[0]
-    # print(avg_peaks)
-
     planes, polygons = polylidar.extract_planes_and_polygons(mesh)
-    # mesh, planes, polygons = polylidar.extract_planes_and_polygons(points_mat)
-    # polygons = extractPolygons(points3D_rot_, **polylidar_kwargs)
     t2 = time.perf_counter()
     planes, obstacles = filter_planes_and_holes2(
         polygons, points3D_rot_, postprocess_config)
