@@ -8,7 +8,8 @@ from scipy import spatial
 import cv2
 from shapely.geometry import Polygon, JOIN_STYLE
 
-from polylidar import extractPolygons
+from polylidar import MatrixDouble, Delaunator
+from kittiground.grounddetector.estimate_ground import extract_all_dominant_plane_normals
 
 M2TOCM2 = 10000
 CMTOM = 0.01
@@ -110,8 +111,8 @@ def recover_3d(poly, kd_tree, z_value):
     # print(poly_3d.exterior)
 
 
-def get_polygon(points3D_cam, polylidar_kwargs, postprocess_config):
-    """Gets polygons from pont cloud
+def get_polygon(points3D_cam, polylidar, postprocess_config):
+    """Gets polygons from point cloud
 
     Arguments:
         points3D_cam {ndarray} -- Point cloud in Camera Frame
@@ -124,25 +125,40 @@ def get_polygon(points3D_cam, polylidar_kwargs, postprocess_config):
         a tuple of execution times
 
     """
-    t0 = time.time()
+    t0 = time.perf_counter()
     points3D_rot, rm = align_vector_to_axis(
         points3D_cam, np.array([0, 1, 0]))
     points3D_rot_ = np.ascontiguousarray(points3D_rot[:, :3])
     logging.debug(
         "Extracting Polygons from point cloud of size: %d", points3D_rot.shape[0])
-    t1 = time.time()
-    polygons = extractPolygons(points3D_rot_, **polylidar_kwargs)
-    t2 = time.time()
+    t1 = time.perf_counter()
+    points_mat = MatrixDouble(points3D_rot_)
+    # We need to perform these steps manually if we are going to pass a mesh instead of just the points
+    mesh = Delaunator(points_mat)
+    mesh.triangulate()
+    mesh.compute_triangle_normals()
+    t1_2 = time.perf_counter()
+    # import ipdb; ipdb.set_trace()
+    # avg_peaks, pcd_all_peaks, arrow_avg_peaks, colored_icosahedron, timings = extract_all_dominant_plane_normals(mesh, with_o3d=False)
+    # peak = avg_peaks[0]
+    # print(avg_peaks)
+
+    planes, polygons = polylidar.extract_planes_and_polygons(mesh)
+    # mesh, planes, polygons = polylidar.extract_planes_and_polygons(points_mat)
+    # polygons = extractPolygons(points3D_rot_, **polylidar_kwargs)
+    t2 = time.perf_counter()
     planes, obstacles = filter_planes_and_holes2(
         polygons, points3D_rot_, postprocess_config)
     logging.debug("Number of Planes: %d; Number of obstacles: %d",
                     len(planes), len(obstacles))
-    t3 = time.time()
+    t3 = time.perf_counter()
 
     t_rotation = (t1 - t0) * 1000
     t_polylidar = (t2 - t1) * 1000
+    t_polylidar_mesh = (t1_2 - t1) * 1000
+    t_polylidar_planepoly = (t2 - t1_2) * 1000
     t_polyfilter = (t3 - t2) * 1000
-    times = (t_rotation, t_polylidar, t_polyfilter)
+    times = dict(t_rotation=t_rotation, t_polylidar_all=t_polylidar, t_polyfilter=t_polyfilter, t_polylidar_mesh=t_polylidar_mesh, t_polylidar_planepoly=t_polylidar_planepoly)
     return points3D_rot, rm, planes, obstacles, times
 
 def filter_planes_and_holes2(polygons, points, config_pp):

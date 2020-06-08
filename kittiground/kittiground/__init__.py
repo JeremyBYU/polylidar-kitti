@@ -9,11 +9,14 @@ import numpy as np
 import open3d as o3d
 from matplotlib.colors import Normalize
 import matplotlib.pyplot as plt
+import pandas as pd
 
 from kittiground import EXTRINSICS, IMG_WIDTH, IMG_HEIGHT
 from kittiground.kittiground.outlier import outlier_removal
 from kittiground.kittiground.open3d_util import init_vis, handle_shapes, set_initial_view, get_extrinsics
 from kittiground.grounddetector import filter_planes_and_holes2, plot_planes_and_obstacles, project_points, get_polygon, plot_points
+
+from polylidar import Polylidar3D
 
 np.set_printoptions(suppress=True,
                     formatter={'float_kind': '{:.8f}'.format})
@@ -22,6 +25,7 @@ np.set_printoptions(suppress=True,
 def map_colors(inp, colormap, vmin=None, vmax=None):
     norm = Normalize(vmin, vmax)
     return colormap(norm(inp))
+
 
 class KittiGround(object):
     def __init__(self, config):
@@ -38,7 +42,8 @@ class KittiGround(object):
         self.postprocess = config['polygon']['postprocess']
         self.record = config['record']
         stacked_str = "_stacked" if self.record['stacked'] and self.view_3D['active'] else ""
-        self.record['fpath'] = str(Path(self.record['directory']) / "{}_{}{}.avi".format(self.date, self.drive, stacked_str))
+        self.record['fpath'] = str(Path(self.record['directory']) /
+                                   "{}_{}{}.avi".format(self.date, self.drive, stacked_str))
         self.interactive = config['interactive']
 
         self.load_kitti(self.data_folder, self.date,
@@ -46,6 +51,8 @@ class KittiGround(object):
         self.cm = plt.get_cmap(self.pointcloud['color_map'])
 
         self.frame_iter = range(len(self.data_kitti.velo_files))
+
+        self.polylidar = Polylidar3D(**self.polylidar_kwargs)
 
     def load_kitti(self, data_folder: str, date: str, drive: str, **kwargs):
         self.data_kitti = pykitti.raw(data_folder, date, drive, **kwargs)
@@ -139,8 +146,6 @@ class KittiGround(object):
         intensity_filt = np.ascontiguousarray(intensity[idx])
         return pts3D_cam_rect_filt, intensity_filt
 
-
-
     def load_frame(self, frame_idx: int):
         """Load frame from kitti
 
@@ -208,7 +213,7 @@ class KittiGround(object):
 
     def get_colors(self, colors, vmin=None, vmax=None):
         mycolors = map_colors(colors, self.cm, vmin=vmin, vmax=vmax)
-        return mycolors[:,:3]
+        return mycolors[:, :3]
 
     def run(self):
         current_extrinsics = EXTRINSICS
@@ -220,7 +225,8 @@ class KittiGround(object):
         if self.record['active']:
             record_frame_width = IMG_WIDTH
             record_frame_height = IMG_HEIGHT * 3 if self.record['stacked'] and self.view_3D['active'] else IMG_HEIGHT
-            out_vid = cv2.VideoWriter(self.record['fpath'], cv2.VideoWriter_fourcc('X','2','6','4'), 10, (record_frame_width,record_frame_height))
+            out_vid = cv2.VideoWriter(self.record['fpath'], cv2.VideoWriter_fourcc(
+                'X', '2', '6', '4'), 10, (record_frame_width, record_frame_height))
 
         for frame_idx in self.frame_iter:
             # load image and point cloud
@@ -232,12 +238,13 @@ class KittiGround(object):
                     "Missing velodyne point cloud for frame, skipping...")
                 continue
             # extract plane-like polygons
-            points3D_rot, poly_rm, planes, obstacles, times = get_polygon(pts3D_cam, self.polylidar_kwargs, self.postprocess)
+            points3D_rot, poly_rm, planes, obstacles, times = get_polygon(
+                pts3D_cam, self.polylidar, self.postprocess)
             # Get and print timing information
-            (t_rotation, t_polylidar, t_polyfilter) = times
-            time_samples.append((t_outlierpc, ) +times)
-            logging.info("Frame idx: %d; Execution time(ms) - PC Filter: %.1f; PC Rotation: %.1f; Polylidar: %.1f; Plane Filtering: %.1f",
-                         frame_idx, t_outlierpc, t_rotation, t_polylidar, t_polyfilter)
+            times['t_outlier'] = t_outlierpc
+            time_samples.append(times)
+            logging.info("Drive: %s, Frame idx: %d; Execution time(ms) - PC Filter: %.1f; PC Rotation: %.1f; Polylidar: %.1f; Plane Filtering: %.1f",
+                         self.drive, frame_idx, t_outlierpc, times['t_rotation'], times['t_polylidar_all'], times['t_polyfilter'])
             # print()
 
             # Write over 2D Image
@@ -259,7 +266,7 @@ class KittiGround(object):
                         cv2.waitKey(10000)
                     else:
                         cv2.waitKey(1)
-                    
+
             if self.view_3D['active']:
                 cv2.waitKey(1)
                 # colors = np.zeros_like(points3D_rot)
@@ -268,8 +275,9 @@ class KittiGround(object):
                 # Plot 3D Shapes in Open3D
                 pcd.points = o3d.utility.Vector3dVector(points3D_rot)
                 if self.view_3D['show_polygons']:
-                    all_polys = handle_shapes(vis, planes, obstacles, all_polys, line_radius=self.view_3D['line_radius'])
-                vis.update_geometry()
+                    all_polys = handle_shapes(vis, planes, obstacles, all_polys,
+                                              line_radius=self.view_3D['line_radius'])
+                vis.update_geometry(pcd)
                 vis.update_renderer()
 
                 # Update view
@@ -281,7 +289,7 @@ class KittiGround(object):
                     image_3D = cv2.cvtColor(image_3D, cv2.COLOR_RGB2BGR)
                     stacked_image = np.vstack((img, image_3D))
                     out_vid.write(stacked_image)
-    
+
                 # wait for user press a key on opencv image
                 while(self.interactive):
                     vis.poll_events()
@@ -290,7 +298,10 @@ class KittiGround(object):
                     current_extrinsics = get_extrinsics(vis)
                     if res != -1:
                         break
-        time_samples = np.array(time_samples)
-        means = np.mean(time_samples, axis=0)
-        logging.info("Mean Execution Time - Point Cloud Filter: %.1f; Point Cloud Rotation: %.1f; Polylidar: %.1f; Polygon Filtering: %.1f", *means)
-        return time_samples
+
+        df = pd.DataFrame.from_records(time_samples)
+        means = df.mean()
+        logging.info(
+            "Mean Execution Time - Point Cloud Filter: %.1f; Point Cloud Rotation: %.1f; Polylidar: %.1f; Polygon Filtering: %.1f",
+            means['t_outlier'], means['t_rotation'], means['t_polylidar_all'], means['t_polyfilter'])
+        return df

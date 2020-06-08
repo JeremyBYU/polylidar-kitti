@@ -50,27 +50,27 @@ view_3D: # Settings for 3D point cloud viewer
 
 # Polygon Extraction Settings
 polygon: # Settings for polygons extraction
-  polylidar: # Parameters we send to polylidar. Determine plane and polygon extracton from point clouds.
-    lmax: 1.25 # maximum distance (m) between points in plane for spatial connection
-    zThresh: 0.04 # triangles with z-height (m) less than this have normal filtering skipped. For sensor noise.
-    normThresh: 0.985 # triangles whose normal is greater than X degrees are filtered acos(tri_norm * [0,0,1])
-    normThreshMin: 0.90 # mininum level of planarity needed
-    minTriangles : 3500 # mininum number of triangles in a plane
-    minHoleVertices : 6 # mininum number of vertices in a hole to return
+  polylidar: # Parameters we send to polylidar. Determine plane and polygon extraction from point clouds.
     alpha: 0.0 # must be set to 0.0 if using lmax
+    lmax: 1.25 # maximum distance (m) between points in plane for spatial connection
+    z_thresh: 0.00 # triangles with z-height (m) less than this have normal filtering skipped. For sensor noise.
+    norm_thresh: 0.95 # triangles whose normal is greater than X degrees are filtered acos(tri_norm * [0,0,1])
+    norm_thresh_min: 0.97 # minimum level of planarity needed
+    min_triangles : 3500 # minimum number of triangles in a plane
+    min_hole_vertices : 6 # minimum number of vertices in a hole to return
   postprocess: # post processing of polygons returned from polylidar for ground/obstacle identification
-    filter: # Fitler polygons
+    filter: # Filter polygons
       hole_area: # obstacle (holes in polygons) must have these characteristics
         min: 0.5   # m^2
         max: 40 # m^2
       hole_vertices: # obstacles (holes in polygons) must have these characteristics
-        min: 3 # A linear ring has a mininum of 3 vertices
+        min: 3 # A linear ring has a minimum of 3 vertices
       plane_area: # planes must have these area
         min: 30 # m^2
       num_planes_allowed: 1 # TODO Only allow this many largest planes through
     # These parameters correspond to Shapely polygon geometry operations
-    positive_buffer: 0.02 # m, Positvely expand polygon.  Fills in small holes
-    buffer: 0.3 # m, Negative buffer to polygon. Expands holes and constricuts outer hull of polygon
+    positive_buffer: 0.02 # m, Positively expand polygon.  Fills in small holes
+    buffer: 0.3 # m, Negative buffer to polygon. Expands holes and constricts outer hull of polygon
     simplify: 0.2  # m, simplify edges of polygon
 
 # Recording Settings

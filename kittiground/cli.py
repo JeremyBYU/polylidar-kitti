@@ -20,13 +20,11 @@ def cli():
     """Polyliadr with KITTI Dataset"""
 
 
-def create_time_df(time_samples, drive):
-    df = pd.DataFrame(data=time_samples, columns=[
-                      't_outlier', 't_rotation', 't_polylidar', 't_polyfilter'])
+def create_time_df(df, drive):
     df['frame_idx'] = df.index
     df['drive'] = drive
     df = df[['drive', 'frame_idx', 't_outlier',
-             't_rotation', 't_polylidar', 't_polyfilter']]
+             't_rotation', 't_polylidar_all', 't_polylidar_mesh', 't_polylidar_planepoly', 't_polyfilter']]
     return df
 
 
@@ -65,9 +63,9 @@ def run(input):
     for drive in all_drives:
         config['drive'] = drive
         kg = KittiGround(config)
-        time_samples = kg.run()
+        df = kg.run()
         logging.info("Finished Drive: %r", drive)
-        df = create_time_df(time_samples, drive)
+        df = create_time_df(df, drive)
         all_dfs.append(df)
 
     merged_df = pd.concat(all_dfs)
