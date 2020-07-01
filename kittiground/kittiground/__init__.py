@@ -242,6 +242,7 @@ class KittiGround(object):
                 pts3D_cam, self.polylidar, self.postprocess)
             # Get and print timing information
             times['t_outlier'] = t_outlierpc
+            times['n_points'] = points3D_rot.shape[0]
             time_samples.append(times)
             logging.info("Drive: %s, Frame idx: %d; Execution time(ms) - PC Filter: %.1f; PC Rotation: %.1f; Polylidar: %.1f; Plane Filtering: %.1f",
                          self.drive, frame_idx, t_outlierpc, times['t_rotation'], times['t_polylidar_all'], times['t_polyfilter'])

@@ -23,8 +23,8 @@ def cli():
 def create_time_df(df, drive):
     df['frame_idx'] = df.index
     df['drive'] = drive
-    df = df[['drive', 'frame_idx', 't_outlier',
-             't_rotation', 't_polylidar_all', 't_polylidar_mesh', 't_polylidar_planepoly', 't_polyfilter']]
+    df = df[['drive', 'frame_idx', 'n_points', 't_outlier', 't_rotation',
+             't_polylidar_all', 't_polylidar_mesh', 't_polylidar_bilateral', 't_polylidar_planepoly', 't_polyfilter']]
     return df
 
 
@@ -41,6 +41,15 @@ def plot(input):
     # ax = sns.boxplot(x="Group", y="Execution Time", data=df_melt)
     plt.subplots_adjust(hspace=0.2, wspace=0.05)
     plt.show()
+
+
+@cli.command()
+@click.argument('input', type=click.File('r'))
+def mean(input):
+    df = pd.read_csv(input)
+    df = df[['drive', 'frame_idx', 'n_points','t_outlier', 't_polylidar_mesh', 't_polylidar_bilateral', 't_polylidar_planepoly', 't_polyfilter']]
+    print(df.mean())
+    print(df.count())
 
 
 @cli.command()

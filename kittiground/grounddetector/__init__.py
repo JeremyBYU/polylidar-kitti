@@ -8,7 +8,7 @@ from scipy import spatial
 import cv2
 from shapely.geometry import Polygon, JOIN_STYLE
 
-from polylidar import MatrixDouble, Delaunator
+from polylidar import MatrixDouble, Delaunator, bilateral_filter_normals
 
 M2TOCM2 = 10000
 CMTOM = 0.01
@@ -138,6 +138,8 @@ def get_polygon(points3D_cam, polylidar, postprocess_config):
     mesh.triangulate()
     mesh.compute_triangle_normals()
     t1_2 = time.perf_counter()
+    # bilateral_filter_normals(mesh, 5, 0.25, 0.25)
+    t1_3 = time.perf_counter()
     planes, polygons = polylidar.extract_planes_and_polygons(mesh)
     t2 = time.perf_counter()
     planes, obstacles = filter_planes_and_holes2(
@@ -149,9 +151,10 @@ def get_polygon(points3D_cam, polylidar, postprocess_config):
     t_rotation = (t1 - t0) * 1000
     t_polylidar = (t2 - t1) * 1000
     t_polylidar_mesh = (t1_2 - t1) * 1000
-    t_polylidar_planepoly = (t2 - t1_2) * 1000
+    t_polylidar_bilateral = (t1_3 - t1_2) * 1000
+    t_polylidar_planepoly = (t2 - t1_3) * 1000
     t_polyfilter = (t3 - t2) * 1000
-    times = dict(t_rotation=t_rotation, t_polylidar_all=t_polylidar, t_polyfilter=t_polyfilter, t_polylidar_mesh=t_polylidar_mesh, t_polylidar_planepoly=t_polylidar_planepoly)
+    times = dict(t_rotation=t_rotation, t_polylidar_all=t_polylidar, t_polyfilter=t_polyfilter, t_polylidar_mesh=t_polylidar_mesh, t_polylidar_bilateral=t_polylidar_bilateral, t_polylidar_planepoly=t_polylidar_planepoly)
     return points3D_rot, rm, planes, obstacles, times
 
 def filter_planes_and_holes2(polygons, points, config_pp):

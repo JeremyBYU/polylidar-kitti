@@ -21,16 +21,16 @@ Please see disclaimers below before using Polylidar.
 
 1. Install [conda](https://conda.io/projects/conda/en/latest/) - [Why?](https://medium.freecodecamp.org/why-you-need-python-environments-and-how-to-manage-them-with-conda-85f155f4353c)
 2. `conda create --name kitti python=3.7 && source activate kitti` - Create new virtual python environment
-3. `git clone --recurse-submodules https://github.com/JeremyBYU/polylidar-kitti.git && cd polylidar-kitti` 
+3. `git clone --recurse-submodules https://github.com/JeremyBYU/polylidar-kitti.git && cd polylidar-kitti` . 
 4. `conda install -c conda-forge opencv shapely` - These packages gives an issue for binary dependencies for Windows users, hence why conda should handle it. Use pip if on linux.
-5. `cd thirdparty/polylidar && pip install -e . && cd ../..` - Install polylidar manually because it is not on PyPi.
+5. `cd thirdparty/polylidar` - Install Polylidar3D manually because it is not on PyPi. Follow instructions on repository for python installation.
 6. `pip install -e .` - Install any dependencies for this repository (kittiground).
 
 ## Running
 
 A command line application should be installed after the `pip install` . Run as so:
 
-``` 
+```txt
 $ kittiground run --help
 Usage: kittiground run [OPTIONS] [INPUT]
 
@@ -55,3 +55,12 @@ Polylidar3D (for unorganized point cloud inputs) extracts all "flat" surfaces in
 A small amount of (naive) pointcloud outlier filtering is performed __before__ the point cloud is sent to Polylidar3D. For speed up please install `Cython` -> `pip install Cython` .
 
 Polylidar2D Commit - commit 9a3ab62e8e133790e5ac74acfc2cd39d7d01673e
+
+
+### Alternative Configs
+
+```yaml
+z_thresh: 0.15
+norm_thresh_min: 0.98
+bilateral_filter_normals(mesh, 5, 0.25, 0.25)
+```
