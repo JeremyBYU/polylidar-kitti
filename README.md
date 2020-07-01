@@ -9,7 +9,7 @@ This repository contains code and examples for using [Polylidar3D](https://githu
 The main components of the code are as follows:
 
 1. Using `pykitti` to get camera and Velodyne LiDAR data.
-2. Apply appropriate transformations of th pont cloud between body frame, Velodyne Frame, and Camera frame. This allows projecting the point cloud and polygons into the camera frame.
+2. Apply appropriate transformations of the pont cloud between vehicle body frame, Velodyne Frame, and Camera frame. This allows projecting the point cloud and polygons into the camera frame.
 3. Use `Polylidar3D` to extract flat ground level surfaces and obstacles on said surfaces as polygons.
 4. Perform polygon filtering, buffering (expansion/contraction), and simplification. This is done using Shapely/GEOS.
 5. 2D Viewer - Project polygons onto camera image for display and verification.
