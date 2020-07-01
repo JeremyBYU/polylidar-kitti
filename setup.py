@@ -9,7 +9,7 @@ setup(
         kittiground=kittiground.cli:cli
     ''',
 
-    install_requires=['numpy', 'pykitti', 'pyyaml', 'click', 'open3d', 'scipy', 'matplotlib', 'seaborn'],
+    install_requires=['numpy', 'pykitti', 'pyyaml', 'click', 'open3d', 'scipy', 'matplotlib', 'seaborn', 'pyximport'],
 
     # metadata to display on PyPI
     author="Jeremy Castagno",

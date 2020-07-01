@@ -17,7 +17,7 @@ sns.set()
 
 @click.group()
 def cli():
-    """Polyliadr with KITTI Dataset"""
+    """Polylidar3D with KITTI Dataset"""
 
 
 def create_time_df(df, drive):

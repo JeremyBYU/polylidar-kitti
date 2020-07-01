@@ -226,7 +226,7 @@ class KittiGround(object):
             record_frame_width = IMG_WIDTH
             record_frame_height = IMG_HEIGHT * 3 if self.record['stacked'] and self.view_3D['active'] else IMG_HEIGHT
             out_vid = cv2.VideoWriter(self.record['fpath'], cv2.VideoWriter_fourcc(
-                'X', '2', '6', '4'), 10, (record_frame_width, record_frame_height))
+                'M', 'J', 'P', 'G'), 10, (record_frame_width, record_frame_height))
 
         for frame_idx in self.frame_iter:
             # load image and point cloud

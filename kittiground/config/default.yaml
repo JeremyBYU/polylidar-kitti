@@ -2,7 +2,7 @@
 name: Default settings for polygon extraction of KITTI dataset
 data_folder: "data" # base folder containing KITTI data
 date: "2011_09_26" # date of drive
-drive: "0001" # drive number, #0093 
+drive: "0005" # drive number, #0093 
 cam: 'cam2' # which camera to use, cam0=grey, cam1=grey, cam2=rgb
 interactive: true # wait for human key press to proceed to next frame
 frames:  # which frames
@@ -20,7 +20,7 @@ pointcloud:
 # 2D/3D View Settings
 view_image: # Settings for 2D image viewer
   active: true
-  show_pointcloud: true
+  show_pointcloud: false
   show_polygons: true
 view_3D: # Settings for 3D point cloud viewer
   active: true
@@ -33,8 +33,8 @@ polygon: # Settings for polygons extraction
     alpha: 0.0 # must be set to 0.0 if using lmax
     lmax: 1.25 # maximum distance (m) between points in plane for spatial connection
     z_thresh: 0.00 # triangles with z-height (m) less than this have normal filtering skipped. For sensor noise.
-    norm_thresh: 0.95 # triangles whose normal is greater than X degrees are filtered acos(tri_norm * [0,0,1])
-    norm_thresh_min: 0.97 # minimum level of planarity needed
+    norm_thresh: 0.97 # IGNORE THIS
+    norm_thresh_min: 0.97 # minimum level of planarity needed, acos(tri_norm * [0,0,1])
     min_triangles : 3500 # minimum number of triangles in a plane
     min_hole_vertices : 6 # minimum number of vertices in a hole to return
   postprocess: # post processing of polygons returned from polylidar for ground/obstacle identification
