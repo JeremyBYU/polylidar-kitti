@@ -100,7 +100,7 @@ The videos of all drives can be found [here](https://drive.google.com/drive/fold
 
 ## Disclaimers
 
-Polylidar3D (for unorganized point cloud inputs) extracts all "flat" surfaces in the normal direction provided which must be aligned with the XY plane. The surfaces are represented as polygons. However nothing is truly flat and sensor measurements are noisy. Parameters guide polylidar in how "flat" a surface is. However these same paremeters that allow some noise and non-flatness also allow false-positives (e.g. the road connects into an elevated sidewalk). This code uses a lot of filtering **outside** of Polylidar3D to help reduce these false positives and make simpler polygons.  
+Polylidar3D (for unorganized point cloud inputs) extracts all "flat" surfaces in the normal direction provided which must be aligned with the XY plane. The surfaces are represented as polygons. However nothing is truly flat and sensor measurements are noisy. Parameters guide polylidar in how "flat" a surface is. However these same parameters that allow some noise and non-flatness also allow false-positives (e.g. the road connects into an elevated sidewalk). This code uses a lot of filtering **outside** of Polylidar3D to help reduce these false positives and make simpler polygons.  
 
 ## Notes
 

@@ -54,7 +54,7 @@ polygon: # Settings for polygons extraction
     alpha: 0.0 # must be set to 0.0 if using lmax
     lmax: 1.25 # maximum distance (m) between points in plane for spatial connection
     z_thresh: 0.00 # triangles with z-height (m) less than this have normal filtering skipped. For sensor noise.
-    norm_thresh: 0.95 # triangles whose normal is greater than X degrees are filtered acos(tri_norm * [0,0,1])
+    norm_thresh: 0.97 # triangles whose normal is greater than X degrees are filtered acos(tri_norm * [0,0,1])
     norm_thresh_min: 0.97 # minimum level of planarity needed
     min_triangles : 3500 # minimum number of triangles in a plane
     min_hole_vertices : 6 # minimum number of vertices in a hole to return
